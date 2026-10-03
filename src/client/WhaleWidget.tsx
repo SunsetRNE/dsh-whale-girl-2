@@ -166,7 +166,8 @@ function normalizeConfig(o: unknown): MenuConfig {
     ropeDamp: Number.isFinite(Number(any.ropeDamp)) ? Math.min(10, Math.max(0, Number(any.ropeDamp))) : 3,
     ropeMax: Number.isFinite(Number(any.ropeMax)) ? Math.min(400, Math.max(40, Number(any.ropeMax))) : 150,
     bounceE: Number.isFinite(Number(any.bounceE)) ? Math.min(1, Math.max(0.1, Number(any.bounceE))) : 1,
-    groundFriction: Number.isFinite(Number(any.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(any.groundFriction))) : 0.95
+    groundFriction: Number.isFinite(Number(any.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(any.groundFriction))) : 0.95,
+    deepSleep: any.deepSleep !== false
   }
 }
 
@@ -222,6 +223,17 @@ export function WhaleWidget() {
   const [sling, setSling] = useState<{ fx: number; fy: number; tx: number; ty: number } | null>(null)
   // 省电模式：空闲（挂件无交互）超过 60 秒 = true，暂停漂浮动画/毛玻璃
   const [ecoIdle, setEcoIdle] = useState(false)
+  // 0.4.3 DeepSleep：无任务+无互动 5~10 分钟 = true（挺尸态）；交互/来任务唤醒
+  const [sleeping, setSleeping] = useState(false)
+  const sleepingRef = useRef(false)
+  // 0.4.3 "><" 痛颜眼睛：撞墙/撞面板时一闪（key 变化重放动画，0.3s 即消失）
+  const [eyesKey, setEyesKey] = useState(0)
+  const eyesTimerRef = useRef(0)
+  // 0.4.3 拖尾：中央采样循环的状态（layer 容器 + 上一帧位置 + 采样欠账 + 存活计数）
+  const trailLayerRef = useRef<HTMLDivElement | null>(null)
+  const trailLastRef = useRef<{ x: number; y: number; acc: number } | null>(null)
+  const trailCountRef = useRef(0)
+  const sleepTimerRef = useRef(0)
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
   // 中键弹弓状态
@@ -295,11 +307,31 @@ export function WhaleWidget() {
   const prevWorkRef = useRef<'idle' | 'thinking' | 'done'>('idle')
 
   // 省电模式：挂件交互刷新空闲计时，60 秒无交互 → 暂停漂浮动画/停用毛玻璃（.wg-eco）
+  // 兼任 DeepSleep 唤醒：任何交互立即醒来并撤销睡点（5~10 分钟计时由调度 effect 重排）
   const markActive = useCallback(() => {
     setEcoIdle(false)
     window.clearTimeout(ecoTimerRef.current)
     ecoTimerRef.current = window.setTimeout(() => setEcoIdle(true), 60000)
+    setSleeping(false)
+    window.clearTimeout(sleepTimerRef.current)
   }, [])
+
+  // sleeping 的镜像 ref：高频 rAF 循环（拖尾/旋转弹簧）读 ref 而不进 React 渲染闭包
+  useEffect(() => {
+    sleepingRef.current = sleeping
+  }, [sleeping])
+
+  // DeepSleep 调度：无任务（idle）+ 挺尸开关开着 → 随机 5~10 分钟后入睡；
+  // workState 离开 idle（来任务）立即唤醒；交互唤醒走 markActive（重排本 effect）
+  useEffect(() => {
+    if (!config.deepSleep || workState !== 'idle') {
+      window.clearTimeout(sleepTimerRef.current)
+      if (workState !== 'idle') setSleeping(false)
+      return
+    }
+    sleepTimerRef.current = window.setTimeout(() => setSleeping(true), 300000 + Math.floor(Math.random() * 300000))
+    return () => window.clearTimeout(sleepTimerRef.current)
+  }, [config.deepSleep, workState, sleeping])
 
   // 省电模式开关变化时（含加载时）启动空闲计时：60 秒无交互 → 暂停动画/毛玻璃；关闭则立即恢复
   useEffect(() => {
@@ -360,7 +392,8 @@ export function WhaleWidget() {
     }
   }, [state.balance, config.showBubble, config.lowBalance])
 
-  // 空闲彩蛋：2~5 分钟（随机）无交互时自己说一句；说话即唤醒动画，说完继续省电
+  // 空闲彩蛋：2~5 分钟（随机）无交互时自己说一句；说完继续省电
+  // （不调 markActive：彩蛋不算用户交互，否则会把 DeepSleep 的 5~10 分钟计时一直重置，永远睡不着）
   useEffect(() => {
     if (!config.showBubble) return
     const schedule = () => {
@@ -368,7 +401,6 @@ export function WhaleWidget() {
       idleEggTimerRef.current = window.setTimeout(
         () => {
           setBubble(pickRandomIdleLine())
-          markActive()
           schedule()
         },
         120000 + Math.floor(Math.random() * 180000)
@@ -376,7 +408,7 @@ export function WhaleWidget() {
     }
     schedule()
     return () => window.clearTimeout(idleEggTimerRef.current)
-  }, [config.showBubble, markActive])
+  }, [config.showBubble])
 
   // 数据：宿主在页面顶层注入桥接脚本拉取数据并 postMessage 广播（slots 组件自身 fetch 会被 webserver 403 拦）
   useEffect(() => {
@@ -585,6 +617,7 @@ export function WhaleWidget() {
                     bounced = true
                     soundRef.current?.bounce()
                     shake()
+                    showEyes()
                     setBounceAxis(axis)
                     window.clearTimeout(bounceTimerRef.current)
                     bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
@@ -745,10 +778,11 @@ export function WhaleWidget() {
   const getObstacle = useCallback(() => __wgInfoGlobal, [])
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
     // 角色撞到面板：面板获得角色入射动量（被撞飞，速度 = 角色速度 * 0.8）
+    showEyes()
     infoModeRef.current = 'free'
     infoVelRef.current = { x: invx * 0.8, y: invy * 0.8 }
     freeStartRef.current = performance.now()
-  }, [])
+  }, [showEyes])
   const onInfoUp = useCallback(
     (e: React.PointerEvent) => {
       if (!infoDragRef.current) return
@@ -832,6 +866,59 @@ export function WhaleWidget() {
     bounceTimerRef.current = window.setTimeout(() => setBounce(false), 300)
   }, [])
 
+  // 0.4.3 "><" 痛颜眼睛：key 自增重放弹入动画，320ms 后卸载（设计要求 0.3s 即消失）
+  const showEyes = useCallback(() => {
+    setEyesKey((k) => k + 1)
+    window.clearTimeout(eyesTimerRef.current)
+    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 320)
+  }, [])
+
+  // 0.4.3 拖尾：中央 rAF 采样循环——差分 posRef 得到速度与移动距离，高速时每前进 16px 洒一颗光点
+  // 单一循环覆盖全部运动源（甩抛/绳摆/拖拽跟手/面板撞击）；速度越快单位时间过的 16px 越多 = 拖尾自动变长
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const step = (now: number) => {
+      const dt = Math.max(0.001, Math.min(0.05, (now - last) / 1000))
+      last = now
+      const layer = trailLayerRef.current
+      const p = posRef.current
+      if (!layer || sleepingRef.current) {
+        trailLastRef.current = null
+      } else {
+        const lt = trailLastRef.current
+        if (lt) {
+          const dist = Math.hypot(p.x - lt.x, p.y - lt.y)
+          const speed = dist / dt
+          if (speed > 250) {
+            lt.acc += dist
+            while (lt.acc >= 16 && trailCountRef.current < 36) {
+              lt.acc -= 16
+              const size = 7 + Math.min(9, speed / 400)
+              const dot = document.createElement('span')
+              dot.className = 'wg-trail-dot'
+              dot.style.width = dot.style.height = `${size.toFixed(1)}px`
+              dot.style.left = `${(p.x + WIDGET_W / 2 - size / 2).toFixed(1)}px`
+              dot.style.top = `${(p.y + WIDGET_H * 0.4 - size / 2).toFixed(1)}px`
+              layer.appendChild(dot)
+              trailCountRef.current++
+              window.setTimeout(() => {
+                dot.remove()
+                trailCountRef.current--
+              }, 520)
+            }
+          } else if (speed <= 40) {
+            lt.acc = 0 // 停下清欠账，防起步瞬间补射一串
+          }
+        }
+        trailLastRef.current = { x: p.x, y: p.y, acc: lt ? lt.acc : 0 }
+      }
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   /** 弹跳结束后：平滑吸附到最近侧边（保留当前垂直位置）。 */
   const snap = useCallback((x: number, y: number) => {
     const vw = window.innerWidth
@@ -861,10 +948,11 @@ export function WhaleWidget() {
     reportEvent('bounce', { axis })
     soundRef.current?.bounce()
     shake()
+    showEyes()
     setBounceAxis(axis)
     window.clearTimeout(bounceTimerRef.current)
     bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
-  }, [reportEvent, shake])
+  }, [reportEvent, shake, showEyes])
 
   const startRopeSim = useCallback(() => {
     if (ropeRafRef.current) return
@@ -1377,6 +1465,7 @@ export function WhaleWidget() {
             reportEvent('sound', { kind: 'bounce' })
             soundRef.current?.bounce()
             shake()
+            showEyes()
             setBounceAxis(axis)
             window.clearTimeout(bounceTimerRef.current)
             bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
@@ -1393,14 +1482,16 @@ export function WhaleWidget() {
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [reportEvent, shake, snap])
+  }, [reportEvent, shake, snap, showEyes])
 
   return (
     <>
       <style>{WIDGET_CSS}</style>
+      {/* 0.4.3 拖尾容器：fixed 图层压在角色(z-index 2147483647)之下 */}
+      <div className="wg-trail-layer" ref={trailLayerRef} />
       <div
         ref={rootRef}
-        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
+        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${sleeping ? ' wg-sleep' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
         style={
           {
             left: 0,
@@ -1425,6 +1516,23 @@ export function WhaleWidget() {
           <div className="wg-subagent">分身×{state.subagentRunning}</div>
         )}
         <img className="wg-img" src={imgSrc || '/dsh-whale-girl/whale-girl.png'} alt="鲸鱼娘" draggable={false} />
+        {eyesKey > 0 && (
+          <div className="wg-eyes" key={eyesKey}>
+            <svg viewBox="0 0 24 24">
+              <path d="M5 4 L14 12 L5 20" fill="none" stroke="#1f2c4d" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg viewBox="0 0 24 24">
+              <path d="M19 4 L10 12 L19 20" fill="none" stroke="#1f2c4d" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        {sleeping && (
+          <div className="wg-zzz">
+            <span>Z</span>
+            <span>z</span>
+            <span>z</span>
+          </div>
+        )}
         {petted && (
           <div className="wg-rua" key={petKey}>
             <img src={RUA_GIF_URL} alt="" draggable={false} />

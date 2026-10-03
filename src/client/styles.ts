@@ -431,4 +431,84 @@ export const WIDGET_CSS = `
 .wg-info-bar { flex: 1; height: 5px; background: rgba(80, 110, 190, 0.15); border-radius: 3px; overflow: hidden; }
 .wg-info-fill { height: 100%; background: linear-gradient(90deg, #4a6cf7, #7aa2ff); border-radius: 3px; transition: width 400ms ease; }
 .wg-info-val { font-size: 10px; color: #2a3a66; font-weight: 600; white-space: nowrap; }
+/* ── 0.4.3 "><" 眼睛：撞墙/撞面板时痛颜一闪（独立图层，0.3s 即消失） ── */
+.wg-eyes {
+  position: absolute;
+  top: 16%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  z-index: 10002;
+  pointer-events: none;
+  animation: wg-eyes-pop 300ms ease-out forwards;
+}
+.wg-eyes svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
+}
+@keyframes wg-eyes-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  30% { transform: scale(1.15); opacity: 1; }
+  70% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.92); opacity: 0; }
+}
+/* ── 0.4.3 拖尾：高速运动时按距离采样洒下光点（层级在角色下方） ── */
+.wg-trail-layer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 2147483646;
+  overflow: hidden;
+}
+.wg-trail-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(159, 196, 255, 0.95), rgba(74, 108, 247, 0.55) 60%, rgba(74, 108, 247, 0) 75%);
+  animation: wg-trail-fade 480ms ease-out forwards;
+}
+@keyframes wg-trail-fade {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(0.15); opacity: 0; }
+}
+/* ── 0.4.3 DeepSleep 挺尸态：无任务+无互动 5~10 分钟触发 ── */
+.wg-sleep .wg-img {
+  animation: none;
+  transform: rotate(78deg) translateY(6%) !important;
+  transition: transform 420ms ease;
+}
+.wg-sleep .wg-workstate,
+.wg-sleep .wg-subagent {
+  opacity: 0.35;
+}
+.wg-zzz {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  z-index: 10002;
+  pointer-events: none;
+  font-weight: 800;
+  color: #5a6a99;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+.wg-zzz span {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 15px;
+  opacity: 0;
+  animation: wg-zzz-float 2.7s ease-out infinite;
+}
+.wg-zzz span:nth-child(2) { font-size: 12px; animation-delay: 0.9s; }
+.wg-zzz span:nth-child(3) { font-size: 9px; animation-delay: 1.8s; }
+@keyframes wg-zzz-float {
+  0% { transform: translate(0, 0) rotate(8deg); opacity: 0; }
+  25% { opacity: 0.85; }
+  100% { transform: translate(14px, -30px) rotate(20deg); opacity: 0; }
+}
 `

@@ -49,6 +49,8 @@ export interface MenuConfig {
   bounceE: number
   /** 重力模式落地滑行的地面摩擦 0.8~0.99（越小越滑） */
   groundFriction: number
+  /** DeepSleep 挺尸态：无任务+无互动 5~10 分钟后睡觉，交互唤醒 */
+  deepSleep: boolean
 }
 
 /** API 提供方条目（host /api/providers 返回）。 */
@@ -90,7 +92,8 @@ export const DEFAULT_MENU_CONFIG: MenuConfig = {
   ropeDamp: 3,
   ropeMax: 150,
   bounceE: 1,
-  groundFriction: 0.95
+  groundFriction: 0.95,
+  deepSleep: true
 }
 
 interface Props {
@@ -279,6 +282,9 @@ export function WidgetMenu({ x, y, config, onChange, onResetPosition, onClose, p
       </div>
       <div className="wg-menu-item" onClick={() => set({ ecoMode: !config.ecoMode })}>
         <span className={`wg-menu-check${config.ecoMode ? ' on' : ''}`} /> 省电模式（空闲暂停动画）
+      </div>
+      <div className="wg-menu-item" onClick={() => set({ deepSleep: !config.deepSleep })}>
+        <span className={`wg-menu-check${config.deepSleep ? ' on' : ''}`} /> 挺尸模式（长期空闲会睡着）
       </div>
       <div className="wg-menu-item" onClick={() => set({ showWorkState: !config.showWorkState })}>
         <span className={`wg-menu-check${config.showWorkState ? ' on' : ''}`} /> 工作状态徽章
