@@ -279,6 +279,29 @@ export function apply(ctx: any) {
     // use defaults on first run / malformed config
   }
 
+  /**
+   * 配置落盘：原子写 + 留档。
+   * 旧写法是裸 writeFileSync —— 写到一半被中断会留下截断的 JSON，
+   * 下次启动 normalizeConfig 解析失败就静默退回全部默认值（用户的尺寸/音效设置悄悄丢失）。
+   * 这里先备 .bak 再 rename：原始值永远可从 .whale-girl-config.json.bak 取回。
+   */
+  function writeConfigFile(cfg: WidgetConfig): boolean {
+    try {
+      try {
+        fs.copyFileSync(CONFIG_FILE, CONFIG_FILE + '.bak')
+      } catch {
+        // 首次运行没有原文件，属正常
+      }
+      const tmp = `${CONFIG_FILE}.tmp-${process.pid}-${Date.now()}`
+      fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8')
+      fs.renameSync(tmp, CONFIG_FILE)
+      return true
+    } catch (e) {
+      diag(`config-write-failed: ${String(e)}`)
+      return false
+    }
+  }
+
   let cachedBalance: number | null = null
   let cachedCurrency = 'CNY'
   let lastTurnCost: number | null = null
@@ -583,15 +606,16 @@ export function apply(ctx: any) {
             body += String(c)
           })
           req.on('end', () => {
+            let saved = false
             try {
               const parsed = JSON.parse(body)
               widgetConfig = normalizeConfig(parsed)
-              fs.writeFileSync(CONFIG_FILE, JSON.stringify(widgetConfig, null, 2))
+              saved = writeConfigFile(widgetConfig)
             } catch {
               // keep current on malformed body
             }
             res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-            res.end(JSON.stringify({ ok: true, config: widgetConfig }))
+            res.end(JSON.stringify({ ok: saved, config: widgetConfig }))
           })
           return
         }

@@ -408,7 +408,7 @@ export function WidgetMenu({ x, y, config, onChange, onResetPosition, onSleep, o
       </div>
       <div className="wg-menu-divider" />
       <div className="wg-menu-item" onClick={onResetPosition}>↺ 恢复默认位置</div>
-      <div className="wg-menu-item" onClick={() => { onSleep(); onClose() }}>😴 立刻哄睡</div>
+      <div className="wg-menu-item" onClick={() => { onSleep?.(); onClose() }}>😴 立刻哄睡</div>
     </div>
   )
 }
