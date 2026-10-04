@@ -647,7 +647,9 @@ export function apply(ctx: any) {
         req.on('end', () => {
           // 交互回流是"逐次点击"级别的量：实测 32 次点击产生 192 行 event，占日志 24%。
           // 收进 DEBUG —— diag 修好之前的空转让人以为这条链路不要钱，其实不是。
-          if (DEBUG) diag(`event: ${body.slice(0, 200)}`)
+          // 默认只收「诊断价值高、量又小」的两类：点击与吸附（一次点击最多 2 行）。
+          // 其余仍在 DEBUG 下才写 —— 实测 32 次点击就产 192 行 event，全开会把日志淹掉。
+          if (DEBUG || /"(click|snap)"/.test(body)) diag(`event: ${body.slice(0, 200)}`)
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
           res.end('{"ok":true}')
         })

@@ -1039,6 +1039,25 @@ export function WhaleWidget() {
     // 角色落在中间就判定「不吸附」，表现就是挂件甩不到边上。
     const margin =
       config.snapMargin > 0 ? config.snapMargin : Math.min(EDGE_SNAP_MARGIN, Math.max(48, Math.round(vw * 0.18)))
+    // 取证：吸附会同时改写 x 与 y（斜向跳）。点击若意外走到这里，这条上报会落进宿主日志 ——
+    // 用来分辨「点击触发了吸附」还是「另有位移源」。每次吸附一行，量很小。
+    try {
+      window.postMessage(
+        {
+          __wgEvent: {
+            type: 'snap',
+            fromX: Math.round(x),
+            fromY: Math.round(y),
+            edgeDist: Math.round(edgeDist),
+            margin: Math.round(margin),
+            t: Date.now()
+          }
+        },
+        '*'
+      )
+    } catch {
+      // ignore
+    }
     if (edgeDist > margin) {
       setPos({ x: px, y: py })
       return
@@ -1433,7 +1452,7 @@ export function WhaleWidget() {
 
       // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）；点击=戳她 → "><" 痛颜（10/4 加大触发面：撞墙之外多一条日常触发）
       if (!moved) {
-        reportEvent('click')
+        reportEvent('click', { x: Math.round(posRef.current.x), y: Math.round(posRef.current.y), moved })
         showEyes()
         setPetted(true)
         setPetKey((k) => k + 1)
