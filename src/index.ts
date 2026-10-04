@@ -1,6 +1,6 @@
 import { fetchBalance, Ledger, fetchProviderBalance } from './services/balance'
 import { listProviders, currentModel, selectModel } from './services/providers'
-import { computeContextPct, DEFAULT_CONTEXT_LIMIT } from './services/context'
+import { computeContextPct, DEFAULT_CONTEXT_LIMIT, occupancyOf, pickSessionId, type Occupancy } from './services/context'
 import { estimateCostUnsplit, DEEPSEEK_PRICE } from './services/turnCost'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -8,7 +8,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const name = 'dsh-whale-girl-2'
-export const inject = ['webServer', 'credentials', 'timer', 'tokenMeter', 'sessions', 'agents']
+// sessionProjections：读官方 `contextPressure` 投影（与 ContextMeter 同口径、按会话缓存、随事件即时刷新）
+export const inject = ['webServer', 'credentials', 'timer', 'tokenMeter', 'sessions', 'agents', 'sessionProjections']
 
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 const USAGE_FILE = path.join(DSH_HOME, '.whale-girl-usage.json')
@@ -150,6 +151,8 @@ export interface WidgetConfig {
   edgeGuard: number
   /** 松手甩抛（惯性滑行）：false = 松手就地停住（默认关） */
   flingOnRelease: boolean
+  /** 上下文容量线兜底（token）：仅在拿不到 contextPressure 投影的 contextWindow 时使用 */
+  contextLimit: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -201,7 +204,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   snapInset: 6,
   snapOnRelease: false,
   edgeGuard: 6,
-  flingOnRelease: false
+  flingOnRelease: false,
+  contextLimit: 600000
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -251,7 +255,9 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     // 松手吸附开关：手机端默认关（拖到哪停哪），要吸附在设置页打开
     snapOnRelease: o.snapOnRelease === true,
     // 松手甩抛：默认关 —— 旧行为是松手后按末速继续滑（摩擦 0.985/帧，800px/s 的轻甩可滑近千 px）钉在角落
-    flingOnRelease: o.flingOnRelease === true
+    flingOnRelease: o.flingOnRelease === true,
+    // 上下文容量线兜底：只在 contextPressure 投影没给 contextWindow 时用得上
+    contextLimit: Number.isFinite(Number(o.contextLimit)) ? Math.max(1000, Number(o.contextLimit)) : 600000
   }
 }
 
@@ -340,10 +346,91 @@ export function apply(ctx: any) {
   let lastTurnCost: number | null = null
   // 活跃子代理（分身的 running 计数），由 jobs 服务回调维护（装 subagent bundle 后生效）
   let subagentRunning = 0
-  // 当前活跃会话（turn-stopping 时记录；ctx.sessions.list()[0] 不稳定）
-  let currentSession: any = null
-  // 缓存最近一次成功获取的会话，避免 buildState 轮询时会话引用短暂丢失导致上下文闪 0
-  let lastKnownSession: any = null
+  // ── 当前会话识别（0.5.0 重做）────────────────────────────────────────────
+  // 旧实现三处错（真机日志 + DSH 源码定位）：
+  //   ① 读 `agent.session` / `agent.sessionId`，而本版 DSH 的 Agent 就是 `{ id }` → 永远 undefined，
+  //      `if (!session) return` 直接把 currentSession 卡死在 null（日志里 34 条 measure: session=false）；
+  //   ② 用 `ctx.sessions.list()[0]` 兜底，而该 API 是「按创建顺序的活动会话」，[0] 是**最旧**的；
+  //   ③ 把会话引用缓存成 lastKnownSession，切会话后仍显示上一个会话的占用。
+  let activeAgentId: string | null = null
+  /** sessionId → 最近一次事件时间（用于识别「当前会话」） */
+  const seenSessions = new Map<string, number>()
+  let lastSessionId: string | null = null
+  let cachedOccupancy: Occupancy = { tokens: 0, limit: DEFAULT_CONTEXT_LIMIT, pct: 0, source: 'none' }
+  /** 回退路径（拿不到 contextPressure 投影时）的 surfaceTokens 缓存，避免每次轮询都 O(surface) 全量 measure */
+  let fallbackSurfaceTokens = 0
+  let fallbackMeasuredAt = 0
+
+  const sessionStore = (): any => ctx.sessions ?? ctx.get?.('sessions')
+
+  function sessionOf(id: string | null | undefined): any {
+    if (!id) return null
+    try {
+      return sessionStore()?.get?.(id) ?? null
+    } catch {
+      return null
+    }
+  }
+
+  /** 当前会话：根 agent 的会话 → 最近 turn 的 agent 会话 → 事件时间表里最新的会话 */
+  function resolveSession(): any {
+    let rootId: string | null = null
+    try {
+      rootId = ctx.agents?.roots?.()?.[0]?.id ?? null
+    } catch {
+      rootId = null
+    }
+    const id = pickSessionId({ rootId, activeId: activeAgentId, seen: seenSessions })
+    return sessionOf(id)
+  }
+
+  /**
+   * 占用率：优先官方 `contextPressure` 投影（dsh-token-meter 注册的会话投影，按事件即时折叠、按会话隔离）
+   * —— 口径与官方 ContextMeter 完全一致，且**切会话就是换一份投影**，天然跟随。
+   * 投影不可用（老宿主 / 未注入 sessionProjections）时才退回 measure().surfaceTokens ÷ contextLimit。
+   */
+  function readOccupancy(session: any): Occupancy {
+    let pressure: unknown = null
+    try {
+      const P = ctx.sessionProjections ?? ctx.get?.('sessionProjections')
+      pressure = P?.stateOf?.(session, 'contextPressure') ?? null
+    } catch {
+      pressure = null
+    }
+    let surfaceTokens = 0
+    if (pressure === null) {
+      const now = Date.now()
+      if (now - fallbackMeasuredAt > 10000 || fallbackSurfaceTokens === 0) {
+        try {
+          const tm = ctx.tokenMeter ?? ctx.get('tokenMeter')
+          fallbackSurfaceTokens = Number(tm?.measure?.(session)?.surfaceTokens ?? 0)
+        } catch {
+          fallbackSurfaceTokens = 0
+        }
+        fallbackMeasuredAt = now
+      }
+      surfaceTokens = fallbackSurfaceTokens
+    }
+    const limit = Number(widgetConfig.contextLimit) > 0 ? Number(widgetConfig.contextLimit) : DEFAULT_CONTEXT_LIMIT
+    const occ = occupancyOf(pressure, { tokens: surfaceTokens, limit })
+    return { ...occ, sessionId: session?.id ?? undefined }
+  }
+
+  /** 重算并把「当前会话 + 占用」同步到缓存；返回是否发生了会话切换 */
+  function refreshOccupancy(): boolean {
+    const session = resolveSession()
+    if (!session) return false
+    const id = String(session.id ?? '')
+    const switched = id !== '' && id !== lastSessionId
+    cachedOccupancy = readOccupancy(session)
+    if (switched) {
+      lastSessionId = id
+      diag(
+        `session-switch → ${id} occ=${(cachedOccupancy.pct * 100).toFixed(1)}% tokens=${cachedOccupancy.tokens} limit=${cachedOccupancy.limit} src=${cachedOccupancy.source}`
+      )
+    }
+    return switched
+  }
 
   // DeepSeek 官方峰谷时段（北京时间）：工作日 9-12 点与 14-18 点为高峰，其余为低谷；周末全天低谷。
   // 依据系统时间判断（与 dsh-whale-widget 的 isPeakTime 一致）。
@@ -433,9 +520,12 @@ export function apply(ctx: any) {
     setTimeout(recountSubagents, 3000) // 启动后兜底
   }
 
-  // 事件流：任意会话事件都更新当前活跃会话引用（whale-widget 同款方式，重启后会话恢复也能拿到）
+  // 事件流：记录「谁最近动过」，并在**会话切换的那一刻**立刻重算占用（不再等下一次轮询）
   ctx.on('session/event', (session: any) => {
-    if (session) currentSession = session
+    if (session?.id) seenSessions.set(String(session.id), Date.now())
+    // 读 contextPressure 投影是 O(1)（dsh-token-meter 已按事件折叠好），所以可以每个事件都重算：
+    // 切会话、涨 token、压缩之后的值都会即时反映到 /api/state。
+    refreshOccupancy()
   })
 
   // 工作状态机（轻量版）：thinking → done → idle。done 判定复用 buildState 的 measure 缓存（60 秒节奏），
@@ -457,21 +547,31 @@ export function apply(ctx: any) {
   }
   // 用户发消息 → 思考中（事件名沿用 pelican 生态验证过的用法；try 包裹防宿主版本差异）
   try {
-    ctx.on('agent/inbox/inserted', () => setWorkState('thinking'))
+    ctx.on('agent/inbox/inserted', (payload: any) => {
+      // 用户刚发消息 = 这个 agent 的会话就是「当前会话」：先切过去，别等轮询
+      const id = payload?.agent?.id
+      if (id) activeAgentId = String(id)
+      setWorkState('thinking')
+      refreshOccupancy()
+    })
   } catch {
     diag('workstate: agent/inbox/inserted 事件不可用')
   }
 
-  // 每轮消耗：turn 即将结束时用 tokenMeter 测当前会话 token，估算本轮成本 + 记入当前小时桶
+  // 每轮消耗：turn 即将结束时量当前会话 token，估算本轮成本 + 记入当前小时桶
   ctx.on('agent/turn-stopping', (payload: any) => {
     setWorkState('done')
     try {
       const agent = payload?.agent
-      const session =
-        agent?.session ??
-        (agent?.sessionId ? ctx.sessions?.get?.(agent.sessionId) : undefined)
+      // ⚠️ 本版 DSH 的 Agent 是 `{ readonly id: SessionId }` —— 没有 .session / .sessionId。
+      // 旧代码读 agent.session 永远 undefined，于是 `if (!session) return`，currentSession 从未赋值。
+      const agentId = agent?.id ?? agent?.sessionId
+      if (agentId) activeAgentId = String(agentId)
+      const session = sessionOf(activeAgentId)
       if (!session) return
-      currentSession = session
+      const occ = readOccupancy(session)
+      cachedOccupancy = occ
+      if (session.id) lastSessionId = String(session.id)
       const tm = ctx.tokenMeter ?? ctx.get('tokenMeter')
       if (!tm) return
       const m = tm.measure(session)
@@ -489,41 +589,27 @@ export function apply(ctx: any) {
 
   // 数据接口：webServer JSON 路由（npm 编译插件用 webServer，不用 Builtin harness）
   function buildState(): object {
-    let contextTokens = 0
+    let contextTokens = cachedOccupancy.tokens
     try {
-      const tm = ctx.tokenMeter ?? ctx.get('tokenMeter')
-      const agent = ctx.agents?.roots?.()[0] ?? ctx.agents?.list?.()[0]
-      const session =
-        currentSession ??
-        lastKnownSession ??
-        agent?.session ??
-        ctx.sessions?.list?.()[0] ??
-        ctx.sessions?.get?.()
-      if (session) lastKnownSession = session
-      if (tm && session) {
-        const m = tm.measure(session)
-        try {
-          if (DEBUG) {
-            diag(`measure-keys: ${Object.keys(m).join(',')}`)
-            diag(`measure: ${JSON.stringify(m).slice(0, 800)}`)
-          }
-        } catch (e: any) {
-          diag(`measure-err: ${String(e)}`)
+      // 每次请求都重算一次：读 contextPressure 投影是 O(1)（dsh-token-meter 按事件折叠好的缓存），
+      // 所以「切会话 / 涨 token / 压缩」都能立刻反映，不再依赖 60 秒轮询。
+      // 回退路径（无投影）内部有 10 秒节流，避免每次轮询都做 O(surface) 全量 measure。
+      refreshOccupancy()
+      contextTokens = cachedOccupancy.tokens
+      // 工作状态机：用当前占用总量判增长（原来是 measure 总量，现在同源）
+      lastMeasureTotal = contextTokens
+      if (workState === 'thinking') {
+        if (lastMeasureTotal !== lastGrowthTotal) {
+          lastGrowthTotal = lastMeasureTotal
+          lastGrowthAt = Date.now()
+        } else if (lastGrowthTotal >= 0 && Date.now() - lastGrowthAt > 50000) {
+          setWorkState('done')
         }
-        // surfaceTokens = 会话表面稳定占用（对话结束不清零）；totalTokens = 请求压力（对话结束归 0）
-        contextTokens = Number(m?.surfaceTokens ?? m?.totalTokens ?? m?.tokens ?? m?.total ?? 0)
-        // 工作状态机：缓存本次 measure 总量，用于 done 判定（60 秒节奏，零额外成本）
-        lastMeasureTotal = Number(m?.totalTokens ?? m?.tokens ?? m?.total ?? 0)
-        if (workState === 'thinking') {
-          if (lastMeasureTotal !== lastGrowthTotal) {
-            lastGrowthTotal = lastMeasureTotal
-            lastGrowthAt = Date.now()
-          } else if (lastGrowthTotal >= 0 && Date.now() - lastGrowthAt > 50000) {
-            setWorkState('done')
-          }
-        }
-      } else {
-        diag(`measure: tm=${!!tm} session=${!!session}`)
+      }
+      if (DEBUG) {
+        diag(
+          `occ: session=${lastSessionId ?? 'null'} tokens=${cachedOccupancy.tokens} limit=${cachedOccupancy.limit} pct=${(cachedOccupancy.pct * 100).toFixed(1)} src=${cachedOccupancy.source}`
+        )
       }
     } catch {
       // ignore
@@ -539,12 +625,17 @@ export function apply(ctx: any) {
       balance: cachedBalance,
       currency: cachedCurrency,
       todayUsage: ledger.state.todayUsage,
-      contextPct: computeContextPct(contextTokens, DEFAULT_CONTEXT_LIMIT),
+      // 占用率与容量线都取自 contextPressure 投影（与官方 ContextMeter 同口径）；
+      // 投影缺失时才退回 surfaceTokens ÷ 配置容量线。
+      contextPct: cachedOccupancy.pct,
       contextTokens,
-      contextLimit: DEFAULT_CONTEXT_LIMIT,
+      contextLimit: cachedOccupancy.limit,
+      contextSource: cachedOccupancy.source,
+      contextSession: lastSessionId,
       lastTurnCost,
       peakLow: peak,
-      refreshMs: widgetConfig.realtimeBalance ? 10000 : 60000,
+      // 占用现在是 O(1) 的投影读取，轮询可以更快：10s（实时档 5s）—— 切会话的反馈不再等一分钟
+      refreshMs: widgetConfig.realtimeBalance ? 5000 : 10000,
       subagentRunning,
       sysInfo: readSys()
     }

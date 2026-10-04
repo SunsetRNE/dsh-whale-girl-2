@@ -3,6 +3,27 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.5.0+mod.7] - 2026-10-04 · 当前会话识别重做（切会话即换判定）
+
+### 真因（插件日志 + DSH 源码定位，非猜测）
+- **当前会话其实从来没被识别出来**：日志里 34 行 `measure: tm=true session=false`
+- 根因①：本版 DSH 的 `Agent` 就是 `{ readonly id: SessionId }`（api-catalog 明确声明）——**没有 `.session` / `.sessionId`**。旧代码 `agent?.session ?? agent?.sessionId` 永远 undefined，`if (!session) return` 把 `currentSession` 永久卡在 null
+- 根因②：兜底用 `ctx.sessions.list()[0]`，而该 API 的语义是「按创建顺序的全部活动会话」，`[0]` 是**最旧**的那个 → 切会话后它稳定指向错的会话
+- 根因③：占用率口径错。官方 ContextMeter 是 `used = pressure.projectedTokens ?? pressure.pressureTokens` ÷ `pressure.contextWindow`；旧代码拿 `measure().surfaceTokens ÷ 写死的 600000`
+- 根因④：`currentSession / lastKnownSession` 缓存会话引用 → 切会话后仍显示上一个会话的数字
+
+### 修法
+- 新增 `src/services/context.ts`：`pickSessionId()`（根 agent → 最近 turn 的 agent → 事件时间表里最新的；**不再用 `list()[0]`**）与 `occupancyOf()`（官方同口径 + 回退链 + `source` 标记）
+- 注入 `sessionProjections`，改用官方 `contextPressure` 投影：`ctx.sessionProjections.stateOf(session, 'contextPressure')` —— 按会话隔离、随 `session/event` 即时折叠，读一次 O(1)
+- `session/event` 里比对解析出的会话 id：**一变就立刻重算**，并记 `session-switch → <id> occ=…% src=…`
+- `agent/inbox/inserted` / `agent/turn-stopping` 改为记录 `agent.id`（不再是 `agent.session`）
+- 轮询 `refreshMs`：60000 → **10000**（实时档 5000）—— 占用改走 O(1) 投影后，不必再为省 CPU 压到一分钟
+- 配置新增 `contextLimit`（兜底容量线，仅当投影缺 `contextWindow` 时使用）
+- 新增 `tests/contextDetect.test.ts` 10 条（含「切会话换投影即刻变」用例）；全套 **57 条通过**
+
+### 不做的事（用户裁决）
+- 旧会话/历史版本的数据不回补：只从当前会话起按新口径显示
+
 ## [0.4.9+mod.6] - 2026-10-04 · 手机端默认档回灌（用户整份配置落进默认值）
 
 ### 做了什么
