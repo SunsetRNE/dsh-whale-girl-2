@@ -18,6 +18,21 @@ const DIAG_FILE = path.join(DSH_HOME, '.whale-girl-diag.log')
 let lastCpuTimes: { total: number; busy: number } | null = null
 const ASSET_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets')
 
+/**
+ * 日志转义：diag 的部分参数来自 HTTP 请求体（如 select-model 的 provider / model），
+ * 未净化直接落盘时，一个 `\n` 就能伪造出一条日志行（实测：provider="a\nb" 把一行拆成两行）。
+ * 控制字符统一转成可见形式，日志每行恒定对应一条记录。
+ */
+function escapeLog(line: string): string {
+  return line.replace(/[\u0000-\u001f\u007f]/g, (c) => {
+    const code = c.charCodeAt(0)
+    if (code === 10) return '\\n'
+    if (code === 13) return '\\r'
+    if (code === 9) return '\\t'
+    return '\\x' + code.toString(16).padStart(2, '0')
+  })
+}
+
 /** 诊断记录（排查 client 数据是否到达、host 数据是否就绪）。用完可删除该日志文件。 */
 function diag(line: string): void {
   try {
@@ -31,7 +46,7 @@ function diag(line: string): void {
       size = 0
     }
     if (size > 1024 * 1024) fs.renameSync(DIAG_FILE, DIAG_FILE + '.old')
-    fs.appendFileSync(DIAG_FILE, `[${new Date().toISOString()}] ${line}\n`)
+    fs.appendFileSync(DIAG_FILE, `[${new Date().toISOString()}] ${escapeLog(line)}\n`)
   } catch {
     // ignore
   }

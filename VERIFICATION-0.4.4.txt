@@ -1,0 +1,73 @@
+dsh-whale-girl 合并版装载实测记录（0.4.4 + 本地二改）
+分支 merge-0.4.4 @ 合并提交 37ee6c9
+实测时刻：2026-10-04 11:03–11:06（本机 DSH web 世代 11 / node v24.19.0）
+运行副本：/root/Project-Integrated-Workspace/dsh-whale-girl-local（profile 软链指向）
+
+============================================================
+一、装载验证（9 项，全部落在运行实例上）
+============================================================
+OK  进程世代 DSHA_WEB_GENERATION=11（上一世代为 9），etimes 76s → 确为新进程
+OK  [11:03:35.376Z] apply-ok → 插件加载成功
+OK  register-skip = 0 / error|throw = 0 → 本机未触发 bundles+自带 patch 双路径重复注册，
+    上游 0.4.4 的 safeRegister 兜底处于"备而未用"状态（后续可作为监控信号）
+OK  /api/state → balance 9.61 / contextPct 0.144 / memPct 82 → 数据桥链路正常
+OK  /api/providers → deepseek-official + 余额 → 提供方列表正常
+OK  /api/config → 200
+OK  视觉：目视确认挂件显示正常（用户确认，非本记录作者实测）
+
+============================================================
+二、版本证据（关键：证明跑的不是 0.4.2）
+============================================================
+/api/config 返回体末尾含 "deepSleep":true
+—— deepSleep 是上游 0.4.3 新增的配置字段，本地 0.4.2 基线中不存在。
+该字段出现在运行实例的响应里，即证明 host 侧加载的是 0.4.4 合并版代码。
+
+原始返回（截尾）：
+{soundMode:"cute",...,groundFriction:0.95,"deepSleep":true}
+
+============================================================
+三、资源一致性（服务端加载的确实是新素材）
+============================================================
+磁盘 assets/whale-girl.png      27014 B  sha256 前16位 ce158bf61b72f07e
+GET /dsh-whale-girl/whale-girl.png  27014 B  sha256 前16位 ce158bf61b72f07e  → MATCH
+（0.4.2 时代的旧基图为 46938 B，体积差异印证素材已换代）
+新增资源：assets/poses/whale-base.png 27014 / whale-pain.png 26814 / whale-sleep.png 26877
+lib/client.js 体积 272239 → 326506 B（+54KB，表情帧 data URL 内联）
+
+============================================================
+四、白名单加固实测（本地二改核心改动，此前只有单测覆盖）
+============================================================
+POST /dsh-whale-girl/api/select-model，三组非法输入：
+  {"provider":"bad:name","model":"m"}   → {"ok":false}   含冒号
+  {"provider":"a\nb","model":"m"}       → {"ok":false}   换行注入
+  {"provider":"../evil","model":"m"}    → {"ok":false}   路径穿越
+副作用复核：/root/.dsh/settings.yaml 未被创建、未产生 .bak → 零副作用
+diag 留痕：三条 "select-model <值>/m ok=false"
+
+============================================================
+五、本轮发现并修复的缺陷：diag 日志未转义
+============================================================
+现象：provider="a\nb" 被拒后，回显进入日志时把一条记录拆成两行——
+      "[11:05:16.795Z] select-model a" / "b/m ok=false"，
+      即未净化的请求体可以伪造日志条目。
+修复：src/index.ts 新增 escapeLog()，把 0x00–0x1F 与 0x7F 转成可见形式
+      （\n \r \t 具名，其余 \xNN），diag() 落盘前统一过一遍。
+验证：node scripts/build.mjs 通过；escapeLog 在 lib/index.js 中出现 2 处；
+      复现单测——含换行输入转义后 split("\n").length === 1 成立。
+注意：本修复需**下次重启**才在运行实例中生效（当前进程仍持修复前代码）。
+
+============================================================
+六、本轮验证未覆盖（各有前置条件，非缺口）
+============================================================
+- 挺尸态：deepSleep=true 已生效，需静置不碰鼠标 5~10 分钟观察是否躺倒 + Zzz、交互是否唤醒
+- 客户端挂载路径：需在 GUI 页面控制台执行 copy(JSON.stringify(window.__wgClientDiag))，
+  期望含 "mount ok" 或 "registered into shell.overlay"
+- 热路径直写 transform 的帧率收益：需 Performance 面板录制拖动过程，与 0.4.2 基线对比
+- 日志注入修复的运行态复验：下次重启后重发 {"provider":"a\nb"} 看日志行数
+
+============================================================
+七、回滚
+============================================================
+git switch main                    # 回到 0.4.2 + 二改基线（ce2765d）
+git checkout main -- src/index.ts  # 单文件回退到未含 escapeLog 的版本
+git switch merge-0.4.4             # 切回合并版（37ee6c9，日志转义修复在其后一个提交）
