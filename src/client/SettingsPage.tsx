@@ -138,8 +138,8 @@ export function SettingsPage(): React.ReactElement {
             <input
               type="range"
               min={0}
-              max={200}
-              step={10}
+              max={160}
+              step={4}
               value={num('snapMargin', 0)}
               onChange={(e) => queue({ snapMargin: Number(e.target.value) })}
               style={{ width: '100%' }}

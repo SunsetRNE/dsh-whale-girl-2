@@ -1045,8 +1045,11 @@ export function WhaleWidget() {
     // 吸附范围：snapMargin > 0 时用手动值，否则按视口自动收窄。
     // 固定 120px 是桌面取值 —— 手机竖屏宽约 380px 时它盖住屏幕中央近三分之一，
     // 角色落在中间就判定「不吸附」，表现就是挂件甩不到边上。
+    // 自动档：只在真正贴近边缘时才吸过去。
+    // 原公式 vw*0.18（手机约 68px）判定圈太大 —— 角色离边还有一大截就被吸走。
+    // 改为 vw*0.09、下限 24px（手机约 34px），EDGE_SNAP_MARGIN 仍作桌面端上限。
     const margin =
-      config.snapMargin > 0 ? config.snapMargin : Math.min(EDGE_SNAP_MARGIN, Math.max(48, Math.round(vw * 0.18)))
+      config.snapMargin > 0 ? config.snapMargin : Math.min(EDGE_SNAP_MARGIN, Math.max(24, Math.round(vw * 0.09)))
     // 取证：吸附会同时改写 x 与 y（斜向跳）。点击若意外走到这里，这条上报会落进宿主日志 ——
     // 用来分辨「点击触发了吸附」还是「另有位移源」。每次吸附一行，量很小。
     try {
