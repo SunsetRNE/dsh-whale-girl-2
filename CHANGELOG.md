@@ -3,6 +3,13 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.5.3] - 2026-10-04 · 首个正式发布（tag `v0.5.3` / GitHub Release）
+
+- 修复取证链路：`diag-event` 白名单放行 `client-diag`（此前只收 `click`/`snap`，客户端诊断被静默丢掉）
+- `/api/context` 在「被问的会话变化」时记一行 `context-probe ← <sessionId>`，作为「页面在看哪个对话框」的直接证据
+- 真机确认：切对话框能换判定（`session-switch` 日志换会话 + 端点返回 `source:"pressure"`、窗口 1,000,000）
+- 发版：`v0.5.3` → <https://github.com/SunsetRNE/dsh-whale-girl-2/releases/tag/v0.5.3>
+
 ## [0.5.2+mod.9] - 2026-10-04 · 改从页面流量里嗅探「当前对话框」（0.5.1 的槽位 props 路走不通）
 
 ### 0.5.1 为什么没解决（真机实测）
