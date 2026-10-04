@@ -431,30 +431,7 @@ export const WIDGET_CSS = `
 .wg-info-bar { flex: 1; height: 5px; background: rgba(80, 110, 190, 0.15); border-radius: 3px; overflow: hidden; }
 .wg-info-fill { height: 100%; background: linear-gradient(90deg, #4a6cf7, #7aa2ff); border-radius: 3px; transition: width 400ms ease; }
 .wg-info-val { font-size: 10px; color: #2a3a66; font-weight: 600; white-space: nowrap; }
-/* ── 0.4.3 "><" 眼睛：撞墙/撞面板时痛颜一闪（独立图层，0.3s 即消失） ── */
-.wg-eyes {
-  position: absolute;
-  top: 40%;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 26px;
-  z-index: 10002;
-  pointer-events: none;
-  animation: wg-eyes-pop 620ms ease-out forwards;
-}
-.wg-eyes svg {
-  width: 18px;
-  height: 18px;
-  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
-}
-@keyframes wg-eyes-pop {
-  0% { transform: scale(0.5); opacity: 0; }
-  12% { transform: scale(1.15); opacity: 1; }
-  75% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0; }
-}
+/* ── 0.4.3 "><" 眼睛：暂撤（10/4 用户裁决，等重画带表情立绘后以图帧形式回归）── */
 /* ── 0.4.3 拖尾：高速运动时按距离采样洒下光点（层级在角色下方） ── */
 .wg-trail-layer {
   position: fixed;

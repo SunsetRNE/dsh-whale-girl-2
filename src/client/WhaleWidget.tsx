@@ -780,12 +780,9 @@ export function WhaleWidget() {
     [config.infoScale, config.linkScale, config.widgetScale]
   )
   const getObstacle = useCallback(() => __wgInfoGlobal, [])
-  // 0.4.3 "><" 痛颜眼睛：key 自增重放弹入动画，320ms 后卸载（设计要求 0.3s 即消失）
-  // ⚠️ 必须定义在 handleObstacleHit 等使用点之前——useCallback 依赖数组在渲染期求值，声明在后会 TDZ 崩溃
+  // 0.4.3 "><" 眼睛暂撤（10/4 用户裁决：SVG 叠图坐标靠猜，等重画带表情立绘后下版本以图帧形式回归）
   const showEyes = useCallback(() => {
-    setEyesKey((k) => k + 1)
-    window.clearTimeout(eyesTimerRef.current)
-    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 650)
+    /* 占位保留：触发点（撞墙/撞面板/点击）已接线，立绘就绪后切回图帧切换 */
   }, [])
 
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
@@ -895,7 +892,7 @@ export function WhaleWidget() {
         if (lt) {
           const dist = Math.hypot(p.x - lt.x, p.y - lt.y)
           const speed = dist / dt
-          // 任意速度贴墙 → "><"（低速蹭墙也触发，高速撞击靠 650ms 时长看清）
+          // 任意速度贴墙 → "><"（视觉层暂撤，检测保留待立绘回归后接图帧切换）
           if (speed > 80 && now > eyesCoolRef.current) {
             const sc = cfgRef.current.widgetScale || 1
             const vl = p.x + ((WIDGET_W * (1 - sc)) / 2)
@@ -1538,16 +1535,6 @@ export function WhaleWidget() {
           <div className="wg-subagent">分身×{state.subagentRunning}</div>
         )}
         <img className="wg-img" src={imgSrc || '/dsh-whale-girl/whale-girl.png'} alt="鲸鱼娘" draggable={false} />
-        {eyesKey > 0 && (
-          <div className="wg-eyes" key={eyesKey}>
-            <svg viewBox="0 0 24 24">
-              <path d="M5 4 L14 12 L5 20" fill="none" stroke="#1f2c4d" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <svg viewBox="0 0 24 24">
-              <path d="M19 4 L10 12 L19 20" fill="none" stroke="#1f2c4d" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        )}
         {sleeping && (
           <div className="wg-zzz">
             <span>Z</span>
