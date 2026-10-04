@@ -253,6 +253,9 @@ export function WhaleWidget() {
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   // posX/posY = 按下瞬间的角色位置：判定为「点击」时用它把跟手造成的微小位移还原回去
   const pressStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null)
+  // 死区是否已越过（每次按下重置）：重锚手指偏移只能做一次 ——
+  // 每帧重锚会让 nx = clientX − (clientX − pos.x) 恒等于 pos.x，角色被钉死、完全拖不动。
+  const deadzonePassedRef = useRef(false)
   // 中键弹弓状态
   const middleModeRef = useRef(false)
   const slingOriginRef = useRef<{ x: number; y: number } | null>(null)
@@ -1267,6 +1270,7 @@ export function WhaleWidget() {
       }
       dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
       pressStartRef.current = { x: e.clientX, y: e.clientY, posX: posRef.current.x, posY: posRef.current.y }
+      deadzonePassedRef.current = false
       trackerRef.current.clear()
       // 0.4：绳摆（弹性绳挂鼠标）与重力是两个独立开关；都没开 = 0.3.12 直接跟手
       // 绳摆延迟激活：等 pointermove 位移超阈值再挂绳（点击不触发下坠）
@@ -1304,10 +1308,12 @@ export function WhaleWidget() {
     if (!middleModeRef.current && pressStartRef.current) {
       const s = pressStartRef.current
       if (Math.hypot(e.clientX - s.x, e.clientY - s.y) <= TAP_SLOP) return
-      // 刚越过死区：按「当前角色位置」重锚手指偏移，消除那 14px 的补跳。
-      // 不重锚时 nx = clientX - dx 会让角色一次性追上 14px —— 手感是「先拖不动、再突然跳」。
-      // 只重锚 dragRef：pressStartRef 还要留给抬手时的 moved 判定，不能动。
-      dragRef.current = { dx: e.clientX - posRef.current.x, dy: e.clientY - posRef.current.y }
+      // 越过死区后**只重锚一次**：按当前角色位置重设手指偏移，消掉那 14px 的补跳。
+      // 每帧重锚会把角色钉死（nx = clientX − (clientX − pos.x) ≡ pos.x）→ 完全拖不动。
+      if (!deadzonePassedRef.current) {
+        deadzonePassedRef.current = true
+        dragRef.current = { dx: e.clientX - posRef.current.x, dy: e.clientY - posRef.current.y }
+      }
     }
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {
