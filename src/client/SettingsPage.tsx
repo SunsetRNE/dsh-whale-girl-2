@@ -82,6 +82,25 @@ export function SettingsPage(): React.ReactElement {
     return Number.isFinite(v) ? v : fallback
   }
 
+  // 本机密度：1 CSS px = 1 dp，渲染时映射到 dpr 个物理像素。
+  // 最细可调步进 = 1 物理像素 = 1/dpr dp（dpr=2.625 时约 0.381）——
+  // 旧控件是 step=1，等于一次跳 2.625 个物理像素，所以「怎么调都对不齐」。
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1
+  const step = 1 / dpr
+  const [measured, setMeasured] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    const onReply = (e: MessageEvent) => {
+      const d = (e.data || {}) as { __wgReply?: string; inset?: number; physPx?: number }
+      if (d.__wgReply !== 'measureInset' || typeof d.inset !== 'number') return
+      setMeasured(`${d.inset.toFixed(3)} dp = ${d.physPx ?? Math.round(d.inset * dpr)} 物理px`)
+      // 只同步显示，不再 POST —— 挂件那边已经 persistConfig 落盘，两边同时写会打架
+      setCfg((c) => (c === null ? c : { ...c, snapInset: d.inset }))
+    }
+    window.addEventListener('message', onReply)
+    return () => window.removeEventListener('message', onReply)
+  }, [dpr])
+
   return (
     <div style={{ padding: '16px 20px', fontSize: 13, lineHeight: 1.7 }}>
       <h3 style={{ margin: '0 0 4px' }}>鲸鱼娘 · 尺寸与适配</h3>
@@ -172,14 +191,16 @@ export function SettingsPage(): React.ReactElement {
           <div style={{ marginTop: 12, marginBottom: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>贴边留白</span>
-              <code>{num('snapInset', 12) + 'px'}</code>
+              <code>
+                {num('snapInset', 12).toFixed(2)} dp = {Math.round(num('snapInset', 12) * dpr)} 物理px
+              </code>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
                 type="range"
                 min={0}
                 max={40}
-                step={1}
+                step={step}
                 value={num('snapInset', 12)}
                 onChange={(e) => queue({ snapInset: Number(e.target.value) })}
                 style={{ flex: 1 }}
@@ -188,12 +209,44 @@ export function SettingsPage(): React.ReactElement {
                 type="number"
                 min={0}
                 max={40}
-                step={1}
-                value={num('snapInset', 12)}
+                step={step}
+                value={Number(num('snapInset', 12).toFixed(3))}
                 onChange={(e) => queue({ snapInset: Math.max(0, Math.min(40, Number(e.target.value) || 0)) })}
-                style={{ width: 64 }}
+                style={{ width: 72 }}
               />
             </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              {[0, 2, 4, 6, 8, 12, 16, 24].map((v) => (
+                <button key={v} onClick={() => queue({ snapInset: v })} style={{ padding: '2px 8px' }}>
+                  {v}
+                </button>
+              ))}
+              <button
+                onClick={() =>
+                  queue({ snapInset: Math.max(0, Number((num('snapInset', 12) - step).toFixed(3))) })
+                }
+              >
+                −1 物理px
+              </button>
+              <button
+                onClick={() =>
+                  queue({ snapInset: Math.min(40, Number((num('snapInset', 12) + step).toFixed(3))) })
+                }
+              >
+                +1 物理px
+              </button>
+              <button
+                onClick={() => {
+                  setMeasured('测量中…')
+                  window.postMessage({ __wgCmd: 'measureInset' }, '*')
+                }}
+              >
+                以挂件当前位置为准
+              </button>
+            </div>
+            {measured !== null && (
+              <div style={{ opacity: 0.75, fontSize: 12 }}>已记下：{measured}</div>
+            )}
             <div style={{ opacity: 0.55, fontSize: 12 }}>
               角色与屏幕边缘的最小距离 —— 嫌"贴太死"就往右拉（12~20 观感较稳），拉到 0 才是完全贴边
             </div>

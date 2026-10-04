@@ -10,6 +10,7 @@ import { FlingTracker, startFling } from './PhysicsFling'
 import { WHALE_BASE_DATA_URL, WHALE_SLEEP_DATA_URL, WHALE_PAIN_DATA_URL } from './whalePoseDataUrls'
 import { RUA_GIF_URL } from './ruaDataUrl'
 import { WidgetMenu, MenuConfig, DEFAULT_MENU_CONFIG, ProviderRow } from './WidgetMenu'
+import { measureInset, renderScale, safeDpr, stopPos } from './edgeSnap'
 
 const EMPTY_STATE: WhaleState = {
   balance: null,
@@ -174,7 +175,11 @@ function normalizeConfig(o: unknown): MenuConfig {
     snapMargin: Number.isFinite(Number(any.snapMargin))
       ? Math.min(200, Math.max(0, Math.round(Number(any.snapMargin))))
       : 0,
-    snapInset: Number.isFinite(Number(any.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(any.snapInset)))) : 12,
+    // 贴边留白：不再 Math.round —— 最细步进是 1 物理像素 = 1/dpr dp（dpr=2.625 时 0.381），
+    // 取整会把精度吃掉，表现为「滑块动了、边缘纹丝不动」。
+    snapInset: Number.isFinite(Number(any.snapInset))
+      ? Math.min(60, Math.max(0, Number(any.snapInset)))
+      : 12,
     snapOnRelease: any.snapOnRelease !== false
   }
 }
@@ -325,6 +330,9 @@ export function WhaleWidget() {
   // 贴边留白：吸附与 resize 这些非 React 路径都从 ref 取最新值
   const insetRef = useRef(config.snapInset)
   insetRef.current = config.snapInset
+  // 全量配置 ref：给「拖拽反推留白」这类非 React 回调读最新值（persistConfig 需要整份配置）
+  const configRef = useRef(config)
+  configRef.current = config
   const pressedRef = useRef(pressed)
   pressedRef.current = pressed
   const moveTo = useCallback((x: number, y: number) => {
@@ -335,7 +343,10 @@ export function WhaleWidget() {
     // 按下反馈已改为 .wg-pressed 的滤镜类（见 styles.ts），几何完全不动。
     // 这里若还留着 scaleY(0.9)，热路径直写会盖过 JSX 那份，
     // 且 .wg-root 的 origin 在容器中心 —— 会把靠上摆放的立绘往中心（向下）拉。
-    el.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleRef.current})`
+    // 缩放上格：让视觉宽度正好是整物理像素倍 —— 边缘才有机会压在像素边界上（dpr=2.625 时
+    // 170×0.65=110.5 会落在 290.0625 物理像素上，半格 → 贴边发虚）。偏差 ≤0.5 物理像素。
+    // 与 JSX 那份 transform 必须同构，两份都走 renderScale。
+    el.style.transform = `translate3d(${x}px,${y}px,0) scale(${renderScale(WIDGET_W, scaleRef.current, safeDpr(window.devicePixelRatio))})`
     // 翻转类按真实位置直接切。JSX 里那份用的是 state，热路径期间会滞后一帧，
     // 但下一次重渲染会按同步后的 state 落到同一个值，不会打架。
     el.classList.toggle('wg-flip', x + WIDGET_W / 2 < window.innerWidth / 2)
@@ -568,6 +579,27 @@ export function WhaleWidget() {
       // 宿主不可达则本地已保存
     })
   }, [])
+
+  // 拖拽反推留白：设置页「以当前位置为准」按钮发 postMessage 过来，把当前落点换算成留白写回配置。
+  // 这是替代手调数字的主路径 —— 拖到看着顺眼 → 一键记下，不用猜「12 还是 14 更好看」。
+  useEffect(() => {
+    const onCmd = (e: MessageEvent) => {
+      const d = (e.data || {}) as { __wgCmd?: string }
+      if (d.__wgCmd !== 'measureInset') return
+      const dpr = safeDpr(window.devicePixelRatio)
+      const w = WIDGET_W * renderScale(WIDGET_W, scaleRef.current, dpr)
+      const p = posRef.current
+      const ins = measureInset(p.x, w, window.innerWidth, dpr)
+      persistConfig({ ...configRef.current, snapInset: ins })
+      try {
+        window.postMessage({ __wgReply: 'measureInset', inset: ins, dpr, physPx: Math.round(ins * dpr) }, '*')
+      } catch {
+        // ignore
+      }
+    }
+    window.addEventListener('message', onCmd)
+    return () => window.removeEventListener('message', onCmd)
+  }, [persistConfig])
 
   // 图片：内嵌 dataURL（不依赖网络请求，避免 webserver 对子资源请求的 403 拦截）
 
@@ -1070,6 +1102,8 @@ export function WhaleWidget() {
             fromY: Math.round(y),
             edgeDist: Math.round(edgeDist),
             margin: Math.round(margin),
+            // 首次把 dpr 带出来：设备密度只能从页面内读到（本机 dpr 未知，靠这条落日志）
+            dpr: safeDpr(window.devicePixelRatio),
             t: Date.now()
           }
         },
@@ -1083,8 +1117,21 @@ export function WhaleWidget() {
       setPos({ x: px, y: py })
       return
     }
-    const left = x + (WIDGET_W * sc) / 2 < vw / 2 ? ins : vw - WIDGET_W * sc - ins
-    setPos({ x: Math.max(ins, left), y: Math.max(ins, Math.min(vh - WIDGET_H * sc - ins, y)) })
+    // 停靠位改成物理像素对齐：量化的是「边」不是 x。旧式 `vw - W*sc - ins` 全是浮点，
+    // 1080 宽 dpr=2.625 的机器上右边缘落在 1064.25 物理 px（半格）→ 留白忽宽忽窄、边缘发虚。
+    // 只量化 x 会更糟：dpr=3 的机型本来边缘是 1062.0 整格，被推到 1062.5。
+    const stop = stopPos({
+      vw,
+      vh,
+      baseW: WIDGET_W,
+      baseH: WIDGET_H,
+      scale: sc,
+      ins,
+      side: x + (WIDGET_W * sc) / 2 < vw / 2 ? 'left' : 'right',
+      dpr: safeDpr(window.devicePixelRatio)
+    })
+    // y 上格后再用底部留白钳制；stop.y 与 stop.maxY 都是整物理格
+    setPos({ x: stop.x, y: Math.max(stop.y, Math.min(stop.maxY, y)) })
   }, [config.snapMargin, config.snapOnRelease])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。
@@ -1716,7 +1763,8 @@ export function WhaleWidget() {
             // 按下不再用 scaleY 压扁：.wg-root 是 170×170、transform-origin 在容器中心，
             // 压扁会把靠上摆放的立绘往中心（即向下）拉 —— 点一下就"往下跑"。
             // 改为 .wg-pressed 的滤镜反馈，几何完全不动。
-            transform: `translate3d(${pos.x}px,${pos.y}px,0) scale(${config.widgetScale})`,
+            // 与热路径（moveTo）同构：缩放也上格，否则 React 重渲染这一帧会把宽度推回半格
+            transform: `translate3d(${pos.x}px,${pos.y}px,0) scale(${renderScale(WIDGET_W, config.widgetScale, safeDpr(window.devicePixelRatio))})`,
             '--wg-frost': config.frost,
             '--wg-panel-alpha': config.panelOpacity
           } as React.CSSProperties

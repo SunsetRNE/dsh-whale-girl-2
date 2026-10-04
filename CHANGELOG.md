@@ -3,6 +3,22 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.4.5+mod.2] - 2026-10-04 · 贴边留白改物理像素对齐
+
+### 问题
+- 停靠式 `vw - W*sc - ins` 全是浮点：1080 宽 / dpr=2.625 的机器上右边缘落在 **1064.25 物理 px**（半格），表现为留白忽宽忽窄、边缘发虚
+- 控件步进 1 CSS px = 2.625 物理像素，且宿主 `normalizeConfig` 把 `snapInset` `Math.round` 掉 → 小数精度进不去，滑块动了边缘不动
+
+### 修复
+- 新增 `src/client/edgeSnap.ts`：`renderScale`（等比缩放上格）、`stopPos`（量化「边」而非 x）、`measureInset`（拖拽反推留白）、`formatInset`（dp / 物理px 双单位读数）
+- `WhaleWidget`：`snap()` 改用 `stopPos`；热路径与 JSX 两份 transform 同步走 `renderScale`；snap 事件带出 `dpr`
+- **只量化 x 是错的**：dpr=3 机型本来边缘就是 1062.0 整格，单量化 x 会被推到 1062.5 —— 单测里留了这条对照组
+- 宿主与客户端两侧 `snapInset` 不再取整，保留 1/dpr 精度
+- 设置页：步进 = 1 物理像素（1/dpr dp）、dp/物理px 双读数、档位 0/2/4/6/8/12/16/24、±1 物理px、**「以挂件当前位置为准」**（拖到顺眼处一键反推写回）
+
+### 测试
+- `tests/edgeSnap.test.ts`（10 条）：三种 dpr 下边缘落整格、缩放偏差 ≤0.5 物理像素、反推留白、单位读数；全套 31 条通过
+
 ## [0.4.4+mod.1] - 2026-10-04 · 二改版
 
 ### 归属与命名
