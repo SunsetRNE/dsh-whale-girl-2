@@ -3,6 +3,30 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.5.2+mod.9] - 2026-10-04 · 改从页面流量里嗅探「当前对话框」（0.5.1 的槽位 props 路走不通）
+
+### 0.5.1 为什么没解决（真机实测）
+- 用户反馈：控制台没有 `slot props` 那行、切对话框进度条仍不动
+- 说明挂件**不是**走 slots 注册那条路（那条会带 props），而是走了本插件自己的兜底分支
+  `mountDirect()` → `createRoot(host).render(<WhaleWidget />)` —— **根本没有 props**，
+  所以 `useProjection('contextPressure')` 永远拿到 undefined，显示只能退回宿主值
+- 同时确认：宿主侧猜「当前会话」在原理上也猜不准（打开对话框不产生 session 事件）
+
+### 新做法：嗅探页面自己的流量
+- 新增 `src/client/sessionWatch.ts`：包 `window.fetch` 与 `WebSocket.prototype.send`，
+  从 URL / 帧里抠 `session-<uuid>` —— **打开一个会话必然去拉它的数据**，这串 id 必然出现
+  - `extractSessionId()` 纯函数（一个请求带多个 id 时取最后一个）；`noteSessionId/subscribeSession` 做订阅
+- 新增宿主端点 `GET /dsh-whale-girl-2/api/context?session=<id>`：返回该会话的
+  `{ pct, tokens, limit, source, sessionId }`（复用 0.5.0 的官方 `contextPressure` 投影读取）
+- 挂件每 2 秒按嗅探到的 id 拉一次该端点，`effectivePct = 当前对话框（嗅探）> 槽位投影 > 宿主值`
+- **取证通道**：客户端把关键事件（`watch-on props=…`、`sniff/fetch → session-…`）POST 到既有
+  `/api/diag-event`，落到 `.whale-girl-diag.log` —— 手机上没有方便的控制台，这样我能在容器里直接读到
+- 新增 `tests/sessionWatch.test.ts` 5 条；全套 **62 条通过**
+
+### 验证方式（重启 + 刷新页面后）
+- `grep -E "client-diag" /root/.dsh/.whale-girl-diag.log` → 应看到 `watch-on props=(none)` 与 `sniff/fetch → session-…`
+- 切一次对话框，日志里应出现新的 `sniff/fetch → session-<新 id>`，进度条随该会话的占用变化
+
 ## [0.5.1+mod.8] - 2026-10-04 · 进度条跟随「当前打开的对话框」
 
 ### 问题（真机反馈）

@@ -11,6 +11,7 @@ import { WHALE_BASE_DATA_URL, WHALE_SLEEP_DATA_URL, WHALE_PAIN_DATA_URL } from '
 import { RUA_GIF_URL } from './ruaDataUrl'
 import { WidgetMenu, MenuConfig, DEFAULT_MENU_CONFIG, ProviderRow } from './WidgetMenu'
 import { clampPos, guardBounds, measureInset, renderScale, safeDpr, stopPos } from './edgeSnap'
+import { getWatchedSession, installSessionSniffer, subscribeSession } from './sessionWatch'
 
 const EMPTY_STATE: WhaleState = {
   balance: null,
@@ -276,10 +277,59 @@ export function WhaleWidget({ slot }: { slot?: SlotApi } = {}) {
   const [petted, setPetted] = useState(false)
   const [petKey, setPetKey] = useState(0)
   const [state, setState] = useState<WhaleState>(EMPTY_STATE)
-  // 上下文占用：槽位投影（跟随当前打开的会话）优先，拿不到才用宿主 /api/state 的值
-  const effectivePct = livePct ?? state.contextPct
-  const effectiveTokens = projUsed ?? state.contextTokens
-  const effectiveLimit = projLimit ?? state.contextLimit
+  // ── 当前打开的对话框（嗅探）────────────────────────────────────────────
+  // 挂件挂在 shell.overlay 上，拿不到官方那套 useSession / useProjection props（真机实测该行都没打印），
+  // 宿主也猜不准（「打开对话框」本身不产生 session 事件）。所以直接嗅探页面自己的流量：
+  // 打开一个会话必然去拉它的数据，那串 session-<uuid> 会出现在 fetch URL 或 WS 帧里。
+  const [watchId, setWatchId] = useState<string | null>(() => getWatchedSession())
+  const [watchOcc, setWatchOcc] = useState<{ pct: number; tokens: number; limit: number } | null>(null)
+  useEffect(() => {
+    const report = (msg: string): void => {
+      try {
+        // 客户端没有可读日志 → 借宿主的 diag-event 端点落盘，便于事后取证
+        fetch('/dsh-whale-girl-2/api/diag-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'client-diag', msg })
+        }).catch(() => {})
+      } catch {
+        // ignore
+      }
+    }
+    report(`watch-on props=${slot ? Object.keys(slot).join('|') || '(empty)' : '(none)'}`)
+    const uninstall = installSessionSniffer(report)
+    const unsub = subscribeSession((id) => setWatchId(id))
+    setWatchId(getWatchedSession())
+    return () => {
+      unsub()
+      uninstall()
+    }
+  }, [slot])
+  // 跟着嗅探到的会话问宿主要占用（2 秒一次；该端点只读投影，O(1)）
+  useEffect(() => {
+    if (!watchId) return
+    let alive = true
+    const pull = (): void => {
+      fetch(`/dsh-whale-girl-2/api/context?session=${encodeURIComponent(watchId)}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (alive && d && typeof d.pct === 'number') {
+            setWatchOcc({ pct: d.pct, tokens: d.tokens, limit: d.limit })
+          }
+        })
+        .catch(() => {})
+    }
+    pull()
+    const iv = window.setInterval(pull, 2000)
+    return () => {
+      alive = false
+      window.clearInterval(iv)
+    }
+  }, [watchId])
+  // 上下文占用优先级：当前对话框（嗅探）> 槽位投影 > 宿主 /api/state
+  const effectivePct = watchOcc?.pct ?? livePct ?? state.contextPct
+  const effectiveTokens = watchOcc?.tokens ?? projUsed ?? state.contextTokens
+  const effectiveLimit = watchOcc?.limit ?? projLimit ?? state.contextLimit
   const [bubble, setBubble] = useState<string | null>(null)
   // 0.4.4 三帧立绘：痛颜帧显示期（撞墙/撞面板/点击 650ms）；睡觉帧由 sleeping 状态直接切换
   const [painOn, setPainOn] = useState(false)

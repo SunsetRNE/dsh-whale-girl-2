@@ -705,6 +705,27 @@ export function apply(ctx: any) {
         res.end(JSON.stringify({ state: s, since: workStateSince }))
       }
     })
+    // 指定会话的上下文占用：/api/context?session=<id>
+    // 挂件在页面上嗅探到「当前打开的对话框 id」后直接问这里 —— 切对话框立刻换值，
+    // 不再依赖宿主猜「当前会话」（打开对话框这个动作本身不产生 session 事件）。
+    safeRegister(server, {
+      kind: 'exact',
+      path: '/dsh-whale-girl-2/api/context',
+      handler: (req: any, res: any) => {
+        const url = String(req.url ?? '')
+        const m = /session-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/.exec(url)
+        const wanted = m ? m[0] : null
+        const session = sessionOf(wanted) ?? resolveSession()
+        const occ = session
+          ? readOccupancy(session)
+          : ({ tokens: 0, limit: DEFAULT_CONTEXT_LIMIT, pct: 0, source: 'none' } as Occupancy)
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-store'
+        })
+        res.end(JSON.stringify({ ...occ, sessionId: session?.id ?? wanted, requested: wanted }))
+      }
+    })
     // JSONP 端点：client 用动态 <script> 加载（script 资源请求与 client.js 同通道，可透过 webserver 认证；普通 fetch 会被 403 拦）
     safeRegister(server, {
       kind: 'exact',
