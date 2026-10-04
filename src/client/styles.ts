@@ -493,4 +493,36 @@ export const WIDGET_CSS = `
   25% { opacity: 0.9; }
   100% { transform: translate(18px, -40px) rotate(20deg); opacity: 0; }
 }
+/* 0.4.4 惊醒泡泡：从睡着被叫醒的瞬间，头顶冒一个"啵"（弹起→上飘→消散，与 Zzz 一进一出呼应） */
+.wg-wakepop {
+  position: absolute;
+  top: 1%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(159, 196, 255, 0.78) 45%, rgba(74, 108, 247, 0.38) 72%, rgba(74, 108, 247, 0) 100%);
+  border: 1.5px solid rgba(120, 170, 255, 0.8);
+  box-shadow: 0 0 12px rgba(120, 170, 255, 0.65);
+  pointer-events: none;
+  z-index: 10003;
+  animation: wg-wakepop 700ms ease-out forwards;
+}
+.wg-wakepop::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+}
+@keyframes wg-wakepop {
+  0% { transform: scale(0.2) translateY(6px); opacity: 0; }
+  30% { transform: scale(1.25) translateY(0); opacity: 1; }
+  60% { transform: scale(1) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1.05) translateY(-14px); opacity: 0; }
+}
 `

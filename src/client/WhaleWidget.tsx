@@ -238,6 +238,9 @@ export function WhaleWidget() {
   const eyesCoolRef = useRef(0)
   const cfgRef = useRef(config)
   useEffect(() => { cfgRef.current = config }, [config])
+  // 0.4.4 惊醒泡泡：从睡着被叫醒 → 头顶"啵"一下（key 自增重放，700ms 后卸载）
+  const [wakePop, setWakePop] = useState(0)
+  const wakePopTimerRef = useRef(0)
   const sleepTimerRef = useRef(0)
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -318,6 +321,12 @@ export function WhaleWidget() {
     setEcoIdle(false)
     window.clearTimeout(ecoTimerRef.current)
     ecoTimerRef.current = window.setTimeout(() => setEcoIdle(true), 60000)
+    // 惊醒泡泡：只在"从睡着被叫醒"时触发（睡着的 ref 在渲染后已同步）
+    if (sleepingRef.current) {
+      setWakePop((k) => k + 1)
+      window.clearTimeout(wakePopTimerRef.current)
+      wakePopTimerRef.current = window.setTimeout(() => setWakePop(0), 750)
+    }
     setSleeping(false)
     window.clearTimeout(sleepTimerRef.current)
   }, [])
@@ -508,6 +517,7 @@ export function WhaleWidget() {
       window.clearTimeout(petTimerRef.current)
       window.clearTimeout(ecoTimerRef.current)
       window.clearTimeout(idleEggTimerRef.current)
+      window.clearTimeout(wakePopTimerRef.current)
       flingRef.current?.cancel()
     }
   }, [])
@@ -1558,6 +1568,7 @@ export function WhaleWidget() {
             <span>z</span>
           </div>
         )}
+        {wakePop > 0 && <div className="wg-wakepop" key={wakePop} />}
         {petted && (
           <div className="wg-rua" key={petKey}>
             <img src={RUA_GIF_URL} alt="" draggable={false} />
