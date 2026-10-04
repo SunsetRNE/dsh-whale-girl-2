@@ -139,6 +139,8 @@ export interface WidgetConfig {
   bounceE: number
   /** 重力模式落地滑行的地面摩擦 0.8~0.99（越小越滑） */
   groundFriction: number
+  /** DeepSleep 挺尸态：无任务+无互动 5~10 分钟后睡觉，交互唤醒（默认开） */
+  deepSleep: boolean
 }
 
 const DEFAULT_CONFIG: WidgetConfig = {
@@ -167,7 +169,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   ropeDamp: 3,
   ropeMax: 150,
   bounceE: 1,
-  groundFriction: 0.95
+  groundFriction: 0.95,
+  deepSleep: true
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -199,16 +202,28 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     ropeDamp: Number.isFinite(Number(o.ropeDamp)) ? Math.min(10, Math.max(0, Number(o.ropeDamp))) : 3,
     ropeMax: Number.isFinite(Number(o.ropeMax)) ? Math.min(400, Math.max(40, Number(o.ropeMax))) : 150,
     bounceE: Number.isFinite(Number(o.bounceE)) ? Math.min(1, Math.max(0.1, Number(o.bounceE))) : 1,
-    groundFriction: Number.isFinite(Number(o.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(o.groundFriction))) : 0.95
+    groundFriction: Number.isFinite(Number(o.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(o.groundFriction))) : 0.95,
+    deepSleep: o.deepSleep !== false
   }
 }
 
 // 静态资源：图片 + 音效（给客户端挂件用，带缓存头）
+// 10/4：官方 Desktop loader 会因 bundles+插件自带 patch 双路径产生两次 apply，
+// 路由重复注册会让第二次激活整个失败（表现为挂件消失）——所有 register 改为容错，
+// 重复路由跳过并记 diag，不再抛死。
+function safeRegister(server: any, entry: { path?: string } & Record<string, unknown>): void {
+  try {
+    server.register(entry)
+  } catch (e: any) {
+    diag(`register-skip ${entry?.path ?? '?'}: ${e?.message ?? String(e)}`)
+  }
+}
+
 function registerAssetRoutes(ctx: any): void {
   const webServer = ctx.get('webServer')
   if (!webServer) return
   for (const f of ['whale-girl.png', 'Ya1.mp3', 'Ya2.mp3']) {
-    webServer.register({
+    safeRegister(webServer, {
       kind: 'exact',
       path: `/dsh-whale-girl/${f}`,
       handler: (req: unknown, res: any) => {
@@ -500,7 +515,7 @@ export function apply(ctx: any) {
   }
 
   function registerApiRoutes(server: any): void {
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/state',
       handler: (req: unknown, res: any) => {
@@ -513,7 +528,7 @@ export function apply(ctx: any) {
       }
     })
     // 工作状态端点：done 30 秒、thinking 10 分钟惰性过期归 idle
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/workstate',
       handler: (req: unknown, res: any) => {
@@ -529,7 +544,7 @@ export function apply(ctx: any) {
       }
     })
     // JSONP 端点：client 用动态 <script> 加载（script 资源请求与 client.js 同通道，可透过 webserver 认证；普通 fetch 会被 403 拦）
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/state.js',
       handler: (req: unknown, res: any) => {
@@ -542,7 +557,7 @@ export function apply(ctx: any) {
       }
     })
     // GET：返回挂件配置；POST：保存挂件配置
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/config',
       handler: (req: any, res: any) => {
@@ -573,7 +588,7 @@ export function apply(ctx: any) {
       }
     })
     // 交互诊断回流：bridge 脚本收到挂件事件后上报，供宿主写诊断日志（我读日志即可确认弹跳/点击等交互发生）
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/diag-event',
       handler: (req: any, res: any) => {
@@ -592,7 +607,7 @@ export function apply(ctx: any) {
     })
 
     // API providers list + per-provider balance (parallel; null when unsupported)
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/providers',
       handler: (req: unknown, res: any) => {
@@ -631,7 +646,7 @@ export function apply(ctx: any) {
     })
 
     // Switch default model route (writes agent-default-model in settings.yaml)
-    server.register({
+    safeRegister(server, {
       kind: 'exact',
       path: '/dsh-whale-girl/api/select-model',
       handler: (req: any, res: any) => {

@@ -445,4 +445,98 @@ export const WIDGET_CSS = `
 .wg-info-bar { flex: 1; height: 5px; background: rgba(80, 110, 190, 0.15); border-radius: 3px; overflow: hidden; }
 .wg-info-fill { height: 100%; background: linear-gradient(90deg, #4a6cf7, #7aa2ff); border-radius: 3px; transition: width 400ms ease; }
 .wg-info-val { font-size: 10px; color: #2a3a66; font-weight: 600; white-space: nowrap; }
+/* ── 0.4.3 "><" 眼睛：暂撤（10/4 用户裁决，等重画带表情立绘后以图帧形式回归）── */
+/* ── 0.4.3 拖尾：高速运动时按距离采样洒下光点（层级在角色下方） ── */
+.wg-trail-layer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 2147483646;
+  overflow: hidden;
+}
+.wg-trail-dot {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(159, 196, 255, 0.95), rgba(74, 108, 247, 0.55) 60%, rgba(74, 108, 247, 0) 75%);
+  animation: wg-trail-fade 480ms ease-out forwards;
+}
+@keyframes wg-trail-fade {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(0.15); opacity: 0; }
+}
+/* ── 0.4.3 DeepSleep 挺尸态：无任务+无互动 5~10 分钟触发 ── */
+/* 入睡过渡：缓慢瘫倒（带一点过冲回弹），animation 优先级高于内联 transform，免疫物理循环每帧覆写 */
+.wg-sleep .wg-img {
+  animation: wg-sleep-fall 1100ms ease-in-out forwards !important;
+}
+@keyframes wg-sleep-fall {
+  0% { transform: rotate(0deg) translateY(0); }
+  55% { transform: rotate(62deg) translateY(4%); }
+  75% { transform: rotate(88deg) translateY(7%); }
+  100% { transform: rotate(78deg) translateY(6%); }
+}
+.wg-sleep .wg-workstate,
+.wg-sleep .wg-subagent {
+  opacity: 0.35;
+}
+.wg-zzz {
+  position: absolute;
+  right: 2px;
+  top: -6px;
+  z-index: 10002;
+  pointer-events: none;
+  font-weight: 800;
+  color: #5a6a99;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+.wg-zzz span {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-size: 24px;
+  opacity: 0;
+  animation: wg-zzz-float 2.7s ease-out infinite;
+}
+.wg-zzz span:nth-child(2) { font-size: 19px; animation-delay: 0.9s; }
+.wg-zzz span:nth-child(3) { font-size: 14px; animation-delay: 1.8s; }
+@keyframes wg-zzz-float {
+  0% { transform: translate(0, 0) rotate(8deg); opacity: 0; }
+  25% { opacity: 0.9; }
+  100% { transform: translate(18px, -40px) rotate(20deg); opacity: 0; }
+}
+/* 0.4.4 惊醒泡泡：从睡着被叫醒的瞬间，头顶冒一个"啵"（弹起→上飘→消散，与 Zzz 一进一出呼应） */
+.wg-wakepop {
+  position: absolute;
+  top: 1%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(159, 196, 255, 0.78) 45%, rgba(74, 108, 247, 0.38) 72%, rgba(74, 108, 247, 0) 100%);
+  border: 1.5px solid rgba(120, 170, 255, 0.8);
+  box-shadow: 0 0 12px rgba(120, 170, 255, 0.65);
+  pointer-events: none;
+  z-index: 10003;
+  animation: wg-wakepop 700ms ease-out forwards;
+}
+.wg-wakepop::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+}
+@keyframes wg-wakepop {
+  0% { transform: scale(0.2) translateY(6px); opacity: 0; }
+  30% { transform: scale(1.25) translateY(0); opacity: 1; }
+  60% { transform: scale(1) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1.05) translateY(-14px); opacity: 0; }
+}
 `

@@ -1,10 +1,13 @@
 # dsh-whale-girl
 
-**鲸鱼娘·灵动挂件** —— 一个会卖萌、会记账、会弹跳的 DSH 桌面挂件。
+**鲸鱼娘·灵动挂件** —— 一个会卖萌、会记账、会弹跳、会睡觉的 DSH 桌面挂件。
 
 > ✅ 已收录 [dsh-market 创意工坊](https://dsh-market.com/)（社区插件索引），可在 DSH 内直接搜索"鲸鱼娘 / Whale Girl"安装。
+> ✅ **官方 DSH Desktop 与第三方 DSH 双端兼容**（0.4.3 起）：官方端无 slots 服务的宿主环境已适配，两端都能正常显示挂件。
 
-在 DSH Desktop 右下角显示一只鲸鱼娘，实时展示 DeepSeek 余额、用量与上下文占用，支持拖动、甩抛弹跳、中键弹弓抛掷、彩蛋气泡与右键菜单。
+在 DSH Desktop 右下角显示一只鲸鱼娘：实时展示 DeepSeek 余额、用量与上下文占用，支持绳摆拖拽、甩抛弹跳、中键弹弓、拖尾特效、DeepSleep 入睡与哄睡，自带彩蛋气泡与右键菜单。
+
+<!-- TODO(宣传素材)：这里贴拖尾甩抛 GIF（约 3s）——录屏后替换本注释 -->
 
 ## 功能
 
@@ -12,15 +15,19 @@
 - 💰 **余额 / 用量** —— 实时显示 DeepSeek 余额、今日用量、上轮对话消耗，余额跌破预警线自动气泡提醒
 - 📊 **上下文占用** —— 进度条显示当前会话上下文占用（对齐 DSH 显示），≥90% 主动提醒开新会话
 - ⏱ **峰谷提醒** —— 判断当前时段为用量高峰还是低谷
-- 💬 **彩蛋气泡** —— 点击触发随机台词/彩蛋；空闲 2~5 分钟还会自己开口说一句（说话即唤醒动画，说完继续省电）
-- 🖱 **右键菜单** —— 切换音效、开关显示模块、切换 API 提供方、调节弹弓力度与毛玻璃强度、省电模式开关、恢复默认位置
-- 🎵 **音效** —— 可爱合成音 / 鸭叫 可切换（mp3 内嵌，无网络依赖）
+- 🪢 **绳摆拖拽**（v0.4）—— 拖拽时鼠标成为锚点，角色以弹性绳挂在鼠标上摆动跟随；松手沿切向速度飞出。弹簧系数/空气阻力/弹性上限三滑杆可调
 - 🤸 **甩抛弹跳** —— 快速甩出后在窗口内弹跳，撞边抖动画 + 音效
-- 🎯 **中键弹弓抛掷** —— 按住中键拖动，挂件跟随并绘制蓝色水滴连接线，松手沿原位置方向弹射（力度与拉开距离成正比，可在菜单调节）
+- 🌍 **重力模式**（v0.4）—— 松手自然落地、软着陆反弹、地面摩擦滑行（可调）
+- 🎯 **中键弹弓抛掷** —— 按住中键拖动，挂件跟随并绘制蓝色水滴连接线，松手弹射（力度与拉开距离成正比，菜单可调）
+- ✨ **拖尾**（v0.4.3）—— 高速运动（甩抛/绳摆/拖拽/撞面板）时按距离采样洒下 DeepSeek 蓝光点，速度越快拖尾越长
+- 😴 **DeepSleep 挺尸态**（v0.4.3）—— 无任务 + 无互动 5~10 分钟后缓慢瘫倒入睡（1.1s 过渡动画 + 头顶 Zzz）；任意交互或来任务即醒；菜单可一键「立刻哄睡」
+- 💬 **彩蛋气泡** —— 点击触发随机台词/彩蛋；空闲 2~5 分钟还会自己开口说一句
+- 🖱 **右键菜单** —— 音效切换、显示模块开关、API 提供方切换、弹弓力度、毛玻璃强度、挂件缩放、省电模式、挺尸模式、立刻哄睡、恢复默认位置
+- 🎵 **音效** —— 可爱合成音 / 鸭叫可切换（mp3 内嵌，无网络依赖）
+- 🧩 **工作状态徽章** —— Agent 思考中/搞定啦徽章 + 过渡台词；活跃子代理（分身）数量角标
+- 🛠 **API 提供方面板** —— 列出全部已配置 provider 及其余额，点击即切换默认模型路由
 - 🍃 **省电模式** —— 空闲 60 秒自动暂停漂浮动画并停用毛玻璃（交互立即恢复），降低常驻 GPU/CPU 占用
-- 🧊 **毛玻璃强度** —— 进度条底板模糊度 0~16 可调，0 为关闭（更省资源）
-- 🫧 **底板透明度** —— 进度条底板与右键菜单透明度 0~80% 可调（默认 18%），拉得越高越透，透出页面背景
-- 🖼 **信息面板** —— 浮窗显示时间/日期/CPU/内存，默认跟随角色；角色快速移动或直接拖动时脱钩独立（撞边界/角色反弹、几秒后回归角色下方），跟随距离阈值右键菜单可调
+- 🖼 **信息面板** —— 浮窗显示时间/日期/CPU/内存，默认跟随角色；快速移动或拖动时脱钩独立（撞边界/角色反弹、几秒后回归）
 
 ## 彩蛋台词（节选）
 
@@ -38,14 +45,27 @@
 
 ## 安装
 
-```bash
-# 从 GitHub Release 安装（含 tgz 安装包，推荐）
-dsh plugin add nickkkkkk123123/dsh-whale-girl
+**方式一：npm（推荐，任何人一条命令）**
 
-# 或本地源码目录 link 依赖后加入 profile bundles
+```bash
+# 官方 DSH Desktop
+dsh plugin --profile desktop add dsh-whale-girl
+
+# 第三方 DSH（web profile）
+dsh plugin --profile web add dsh-whale-girl
 ```
 
-> 卸载说明：卸载后 DSH_HOME（`~/.dsh`）会留下三个数据文件（`.whale-girl-config.json` / `.whale-girl-usage.json` / `.whale-girl-diag.log`，及轮转产生的 `.whale-girl-diag.log.old`），均为纯数据、不参与任何执行，不需要可手动删除。
+> 本机没有 `dsh` 命令时用：`npx @deepseek-ai/dsh plugin --profile desktop add dsh-whale-girl`（npm 镜像源自动加速）。
+
+**方式二：GitHub Release tgz（离线/镜像不通时兜底）**
+
+从 [Releases](https://github.com/nickkkkkk123123/dsh-whale-girl/releases) 下载 `dsh-whale-girl-x.y.z.tgz` 后：
+
+```bash
+dsh plugin --profile desktop add ./dsh-whale-girl-x.y.z.tgz
+```
+
+> 卸载说明：卸载后 DSH_HOME（`~/.dsh`）会留下数据文件（`.whale-girl-config.json` / `.whale-girl-usage.json` / `.whale-girl-diag.log`），均为纯数据、不参与任何执行，不需要可手动删除。
 
 ## 配置
 
@@ -60,6 +80,14 @@ dsh plugin add nickkkkkk123123/dsh-whale-girl
   "showPeak": true,
   "slingPower": 20,
   "ecoMode": true,
+  "deepSleep": true,
+  "ropeMode": false,
+  "gravityMode": false,
+  "ropeK": 80,
+  "ropeDamp": 3,
+  "ropeMax": 150,
+  "bounceE": 1,
+  "groundFriction": 0.95,
   "frost": 4,
   "panelOpacity": 0.82,
   "lowBalance": 10
@@ -75,9 +103,14 @@ dsh plugin add nickkkkkk123123/dsh-whale-girl
 | `showPeak` | 是否显示峰谷提醒 |
 | `slingPower` | 中键弹弓发射力度系数（5~60，松手速度 = 拉开距离 × 系数） |
 | `ecoMode` | 省电模式：空闲 60 秒暂停漂浮动画并停用毛玻璃 |
+| `deepSleep` | 挺尸模式：无任务+无互动 5~10 分钟入睡（默认开） |
+| `ropeMode` | 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 |
+| `gravityMode` | 重力模式：松手落地（关闭=悬浮归位） |
+| `ropeK` / `ropeDamp` / `ropeMax` | 弹性绳弹簧系数 / 空气阻力 / 最大伸长量 |
+| `bounceE` / `groundFriction` | 反弹弹性 0.1~1 / 落地滑行摩擦 0.8~0.99 |
 | `frost` | 毛玻璃强度 0~16（进度条底板 blur 像素，0=关闭） |
-| `panelOpacity` | 底板不透明度 0.2~1（内部存储；菜单滑块按「透明度 = 1 − 该值」显示，默认 0.82 即透明度 18%；作用于进度条底板与右键菜单） |
-| `lowBalance` | 余额预警线（元），余额低于该值时气泡提醒充值，0=关闭预警 |
+| `panelOpacity` | 底板不透明度 0.2~1（菜单滑块按「透明度 = 1 − 该值」显示） |
+| `lowBalance` | 余额预警线（元），0=关闭预警 |
 
 ## API 提供方切换
 
@@ -86,10 +119,10 @@ dsh plugin add nickkkkkk123123/dsh-whale-girl
 - **余额查询**：已知平台专用 API（DeepSeek / 硅基流动）优先，否则按 baseURL 自动探测常见余额端点，都没有则显示"余额未知"。
 - **切换模型**：优先用该 provider 在配置里声明的第一个模型，未声明时回退到内置映射。
 
-## 中键弹弓与省电
+## 双端兼容说明（0.4.3）
 
-- **中键弹弓**：按住鼠标中键拖动挂件（自动屏蔽浏览器中键滚轮），原位置与挂件间绘制蓝色水滴连接线；松手时挂件沿「原位置 → 当前」的反方向弹回（橡皮筋手感），速度 = 拉开距离 × `slingPower`，撞边弹跳 + 音效复用甩抛物理。
-- **省电模式**：挂件交互（按下/划过/菜单）会刷新空闲计时，60 秒无交互后自动暂停漂浮动画、停用毛玻璃底板（`:hover` 立即恢复）；菜单可关闭该模式。毛玻璃强度 `frost` 调到 0 或开启省电都能显著降低常驻渲染开销。
+- **第三方 DSH**：挂件经 `shell.overlay` slot + React portal 渲染（原有路径）。
+- **官方 DSH Desktop**：官方 web-app 不提供 slots 服务——客户端改为**直接挂载 body 顶层**，并带 mount 点防重入；官方 loader 的 bundles/patch 双路径激活也做了容错（路由重复自动跳过）。两端行为一致。
 
 ## 占用实测（回应"桌宠一定吃资源"的刻板印象）
 
@@ -97,37 +130,33 @@ dsh plugin add nickkkkkk123123/dsh-whale-girl
 
 | 项目 | 数据 | 说明 |
 | --- | --- | --- |
-| 安装包 | **346KB** | 立绘经 palette 量化压缩（1081KB → 46KB）后整体 -90% |
+| 安装包 | **约 350KB** | 立绘经 palette 量化压缩（1081KB → 46KB）后整体 -90% |
 | 额外进程 | **0 个** | 挂件是 DSH Web UI 内的一个 DOM 节点，不开新进程、不装 Helper |
-| 空闲 CPU 影响 | **约 0.6%** | 同口径 A/B：65 秒空闲窗口内，漂浮动画开/关的整机 CPU 增量差仅 0.15 秒 |
+| 空闲 CPU 影响 | **约 0.6%** | 同口径 A/B：65 秒空闲窗口内，漂浮动画开/关的整机 CPU 增量差仅 0.15 秒（信息面板关闭时） |
 | 空闲 GPU | 省电模式自动归零 | 空闲 60 秒停止逐帧合成调度，交互瞬间恢复 |
 
-测量方法：重启 DSH 后等待 80 秒（越过省电阈值），对全部 DSH 进程取 `TotalProcessorTime`，测 65 秒窗口增量，省电开/关各测一轮取差值。动画的渲染成本主要在 GPU 合成器的逐帧调度（省电模式已消除），CPU 侧几乎免费——"桌宠 = Electron 大户"的印象对本插件不成立。
+测量方法：重启 DSH 后等待 80 秒（越过省电阈值），对全部 DSH 进程取 `TotalProcessorTime`，测 65 秒窗口增量，省电开/关各测一轮取差值。
 
-> **说明（v0.3.x）**：上表为**信息面板关闭（默认）**时的空闲实测。**信息面板开启**（时间/系统资源 + 毛玻璃 `infoFrost` + 物理跟随/碰撞循环）会**额外占用** CPU/GPU，强度取决于 `infoFrost`（模糊半径，0=关闭，见菜单"面板模糊"）与是否开启 **`pauseOnThinking`**（DSH 输出/思考时暂停信息面板物理，默认开）。建议：面板模糊调低（或 0）+ 开 `pauseOnThinking` 可明显降低该额外占用。上表 0.6% 等为信息面板关闭时的值；信息面板开启时的具体数值**可实测**（本页不虚标）。
->
-> **实测（2026-08-30，v0.3.6，DSH 2.0.3 + 多插件环境）**：信息面板**关**≈70.2% 单核 / **开**≈70.9% 单核，**差值 ≈0.7% 单核**——信息面板开启本身**增量极小**（说明 transform 定位 / 物理减负 / `pauseOnThinking` 已生效）。注意：该环境 DSH 2.0.3 + 多后台插件（dsh-dafeiyu-helper 等）的**整体空闲基线约 70% 单核**，与上表 0.6%（0.2 系精简、无这些后台插件）相差大——**0.6% 仅适用于当时精简场景**；实际占用取决于 DSH 版本 / 后台插件数量。
+> **说明**：**信息面板开启**（时间/系统资源 + 毛玻璃 + 物理跟随循环）会额外占用，强度取决于 `infoFrost` 与 `pauseOnThinking`（DSH 输出/思考时暂停面板物理，默认开）。实测（2026-08-30，v0.3.6）：面板开/关差值 ≈0.7% 单核，增量极小。
 
 ## 已知问题：DSH 流式输出时挂件卡顿
 
 **现象**：agent 输出长文字（流式）时，挂件（及同页 UI）在相邻 token 之间会卡顿，输出完毕立即恢复流畅。
 
-**问题真正所在**：**不在本插件**。DSH 前端（官方 `deepseek-ai/deepseek-harness`，DSH Desktop 通过 submodule 引入）在流式输出时**每收到一个 token 就整体重建当前 assistant 消息**（`assistant.ts` 的 `updateChunk` 每 chunk 复制 blocks + 重新渲染整条消息），占用主线程；本挂件与它同页面/同主线程，被连带卡住。虚拟列表已解决长会话整体渲染，但**"流式每 token 全量重建当前消息"是剩余瓶颈**。
+**问题真正所在**：**不在本插件**。DSH 前端在流式输出时**每收到一个 token 就整体重建当前 assistant 消息**，占用主线程；本挂件与它同页面/同主线程，被连带卡住。
 
-**本插件已做的缓解**：`thinking`（DSH 输出/思考）时暂停信息面板物理循环（省主线程，可通过菜单开关）；transform 定位（不触发 layout reflow）；信息面板物理循环减负。**根治在 DSH 的流式渲染层**（该问题已反馈给 DSH Desktop 作者，见其 issue）；挂件自身不产生该卡顿。
+**本插件已做的缓解**：`thinking` 时暂停信息面板物理循环（默认开）；transform 定位（不触发 layout reflow）；物理循环减负。
 
 ## 数据链路（为什么不用 fetch）
 
 DSH Desktop 的 webserver 会对不带 renderer 认证头的子资源请求返回 **403**（包括 `fetch`、`<img>`、`<audio>`、`<script>`）。因此：
 
 - **图片 / 音效**：内嵌为 data URL，完全不走网络请求
-- **数据**：宿主通过 `webserver/index-inject` 向主页面顶层注入桥接脚本，脚本用**带认证的 fetch** 拉取 `/dsh-whale-girl/api/state`，再通过 `postMessage` 广播给挂件（slots 组件运行在 iframe/隔离上下文，其自身 fetch 不带认证会被拦）
-
-> 这也是 `dsh-whale-widget` 数据同样获取不到（只显示余额，不显示上下文）的原因——普通 fetch 在 DSH Desktop 拿不到 host 数据。
+- **数据**：宿主向主页面顶层注入桥接脚本，脚本用**带认证的 fetch** 拉取 `/dsh-whale-girl/api/state`，再通过 `postMessage` 广播给挂件
 
 ## 余额 key
 
-余额通过 `credentials.resolve('DEEPSEEK_API_KEY')` 读取，需在 DSH 中配置 `DEEPSEEK_API_KEY`（与 `dsh-whale-widget` 一致）。
+余额通过 `credentials.resolve('DEEPSEEK_API_KEY')` 读取，需在 DSH 中配置 `DEEPSEEK_API_KEY`（官方端绑定账号或 API 密钥均可）。
 
 ## 开发
 

@@ -7,7 +7,7 @@ import { EasterEgg } from './EasterEgg'
 import { pickRandomIdleLine } from './quotes'
 import { SoundEngine } from './SoundEngine'
 import { FlingTracker, startFling } from './PhysicsFling'
-import { WHALE_GIRL_DATA_URL } from './whaleDataUrl'
+import { WHALE_BASE_DATA_URL, WHALE_SLEEP_DATA_URL, WHALE_PAIN_DATA_URL } from './whalePoseDataUrls'
 import { RUA_GIF_URL } from './ruaDataUrl'
 import { WidgetMenu, MenuConfig, DEFAULT_MENU_CONFIG, ProviderRow } from './WidgetMenu'
 
@@ -166,7 +166,8 @@ function normalizeConfig(o: unknown): MenuConfig {
     ropeDamp: Number.isFinite(Number(any.ropeDamp)) ? Math.min(10, Math.max(0, Number(any.ropeDamp))) : 3,
     ropeMax: Number.isFinite(Number(any.ropeMax)) ? Math.min(400, Math.max(40, Number(any.ropeMax))) : 150,
     bounceE: Number.isFinite(Number(any.bounceE)) ? Math.min(1, Math.max(0.1, Number(any.bounceE))) : 1,
-    groundFriction: Number.isFinite(Number(any.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(any.groundFriction))) : 0.95
+    groundFriction: Number.isFinite(Number(any.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(any.groundFriction))) : 0.95,
+    deepSleep: any.deepSleep !== false
   }
 }
 
@@ -214,7 +215,8 @@ export function WhaleWidget() {
   const [petKey, setPetKey] = useState(0)
   const [state, setState] = useState<WhaleState>(EMPTY_STATE)
   const [bubble, setBubble] = useState<string | null>(null)
-  const [imgSrc] = useState<string>(WHALE_GIRL_DATA_URL)
+  // 0.4.4 三帧立绘：痛颜帧显示期（撞墙/撞面板/点击 650ms）；睡觉帧由 sleeping 状态直接切换
+  const [painOn, setPainOn] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [providers, setProviders] = useState<ProviderRow[] | null>(null)
   const [switching, setSwitching] = useState<string | null>(null)
@@ -222,6 +224,24 @@ export function WhaleWidget() {
   const [sling, setSling] = useState<{ fx: number; fy: number; tx: number; ty: number } | null>(null)
   // 省电模式：空闲（挂件无交互）超过 60 秒 = true，暂停漂浮动画/毛玻璃
   const [ecoIdle, setEcoIdle] = useState(false)
+  // 0.4.3 DeepSleep：无任务+无互动 5~10 分钟 = true（挺尸态）；交互/来任务唤醒
+  const [sleeping, setSleeping] = useState(false)
+  const sleepingRef = useRef(false)
+  // 0.4.3 "><" 痛颜眼睛：撞墙/撞面板时一闪（key 变化重放动画，0.3s 即消失）
+  // 0.4.4 痛颜帧计时器（sleeping 用 sleepingRef 直读，不占 state）
+  const eyesTimerRef = useRef(0)
+  // 0.4.3 拖尾：中央采样循环的状态（layer 容器 + 上一帧位置 + 采样欠账 + 存活计数）
+  const trailLayerRef = useRef<HTMLDivElement | null>(null)
+  const trailLastRef = useRef<{ x: number; y: number; acc: number } | null>(null)
+  const trailCountRef = useRef(0)
+  // 任意速度撞墙闪 "><"：中央循环里做贴墙检测（覆盖甩抛/绳摆/拖拽全运动源），带冷却防刷屏
+  const eyesCoolRef = useRef(0)
+  const cfgRef = useRef(config)
+  useEffect(() => { cfgRef.current = config }, [config])
+  // 0.4.4 惊醒泡泡：从睡着被叫醒 → 头顶"啵"一下（key 自增重放，700ms 后卸载）
+  const [wakePop, setWakePop] = useState(0)
+  const wakePopTimerRef = useRef(0)
+  const sleepTimerRef = useRef(0)
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
   // 中键弹弓状态
@@ -248,6 +268,7 @@ export function WhaleWidget() {
   const roleVelRef = useRef({ x: 0, y: 0 })
   // 0.4 旋转表现：角色朝向用欠阻尼弹簧追赶目标角度（滞后+过冲=摆动更真实）
   const swingTargetRef = useRef(0)
+  const swingCurRef = useRef(0)
   const swingRotRef = useRef({ a: 0, v: 0 })
   const infoPosRef = useRef(infoPos)
   const infoElRef = useRef<HTMLDivElement>(null)
@@ -318,11 +339,37 @@ export function WhaleWidget() {
   const prevWorkRef = useRef<'idle' | 'thinking' | 'done'>('idle')
 
   // 省电模式：挂件交互刷新空闲计时，60 秒无交互 → 暂停漂浮动画/停用毛玻璃（.wg-eco）
+  // 兼任 DeepSleep 唤醒：任何交互立即醒来并撤销睡点（5~10 分钟计时由调度 effect 重排）
   const markActive = useCallback(() => {
     setEcoIdle(false)
     window.clearTimeout(ecoTimerRef.current)
     ecoTimerRef.current = window.setTimeout(() => setEcoIdle(true), 60000)
+    // 惊醒泡泡：只在"从睡着被叫醒"时触发（睡着的 ref 在渲染后已同步）
+    if (sleepingRef.current) {
+      setWakePop((k) => k + 1)
+      window.clearTimeout(wakePopTimerRef.current)
+      wakePopTimerRef.current = window.setTimeout(() => setWakePop(0), 750)
+    }
+    setSleeping(false)
+    window.clearTimeout(sleepTimerRef.current)
   }, [])
+
+  // sleeping 的镜像 ref：高频 rAF 循环（拖尾/旋转弹簧）读 ref 而不进 React 渲染闭包
+  useEffect(() => {
+    sleepingRef.current = sleeping
+  }, [sleeping])
+
+  // DeepSleep 调度：无任务（idle）+ 挺尸开关开着 → 随机 5~10 分钟后入睡；
+  // workState 离开 idle（来任务）立即唤醒；交互唤醒走 markActive（重排本 effect）
+  useEffect(() => {
+    if (!config.deepSleep || workState !== 'idle') {
+      window.clearTimeout(sleepTimerRef.current)
+      if (workState !== 'idle') setSleeping(false)
+      return
+    }
+    sleepTimerRef.current = window.setTimeout(() => setSleeping(true), 300000 + Math.floor(Math.random() * 300000))
+    return () => window.clearTimeout(sleepTimerRef.current)
+  }, [config.deepSleep, workState, sleeping])
 
   // 省电模式开关变化时（含加载时）启动空闲计时：60 秒无交互 → 暂停动画/毛玻璃；关闭则立即恢复
   useEffect(() => {
@@ -383,7 +430,8 @@ export function WhaleWidget() {
     }
   }, [state.balance, config.showBubble, config.lowBalance])
 
-  // 空闲彩蛋：2~5 分钟（随机）无交互时自己说一句；说话即唤醒动画，说完继续省电
+  // 空闲彩蛋：2~5 分钟（随机）无交互时自己说一句；说完继续省电
+  // （不调 markActive：彩蛋不算用户交互，否则会把 DeepSleep 的 5~10 分钟计时一直重置，永远睡不着）
   useEffect(() => {
     if (!config.showBubble) return
     const schedule = () => {
@@ -391,7 +439,6 @@ export function WhaleWidget() {
       idleEggTimerRef.current = window.setTimeout(
         () => {
           setBubble(pickRandomIdleLine())
-          markActive()
           schedule()
         },
         120000 + Math.floor(Math.random() * 180000)
@@ -399,7 +446,7 @@ export function WhaleWidget() {
     }
     schedule()
     return () => window.clearTimeout(idleEggTimerRef.current)
-  }, [config.showBubble, markActive])
+  }, [config.showBubble])
 
   // 数据：宿主在页面顶层注入桥接脚本拉取数据并 postMessage 广播（slots 组件自身 fetch 会被 webserver 403 拦）
   useEffect(() => {
@@ -523,6 +570,7 @@ export function WhaleWidget() {
       window.clearTimeout(petTimerRef.current)
       window.clearTimeout(ecoTimerRef.current)
       window.clearTimeout(idleEggTimerRef.current)
+      window.clearTimeout(wakePopTimerRef.current)
       flingRef.current?.cancel()
     }
   }, [])
@@ -562,12 +610,21 @@ export function WhaleWidget() {
       roleVelRef.current = { x: rvx, y: rvy }
       // 旋转弹簧：欠阻尼追赶目标角度（绳摆角/飞行倾斜），松开后目标缓慢回正
       if (!ropeRef.current && !flinging) swingTargetRef.current *= Math.pow(0.4, dt)
+      // 撞墙瞬间速度反向 → 目标角 ±30 瞬间翻转，弹簧直接追会"抽搐"——目标角限速逼近（240°/s，全翻转约 130ms）
+      const rawTarget = swingTargetRef.current
+      const curTarget = swingCurRef.current
+      const smoothTarget = curTarget + Math.max(-240 * dt, Math.min(240 * dt, rawTarget - curTarget))
+      swingCurRef.current = smoothTarget
       const s = swingRotRef.current
-      const sAcc = (swingTargetRef.current - s.a) * 60 - s.v * 9
+      const sAcc = (smoothTarget - s.a) * 60 - s.v * 9
       s.v += sAcc * dt
       s.a += s.v * dt
       const swingImg = rootRef.current?.querySelector('.wg-img') as HTMLElement | null
-      if (swingImg) swingImg.style.transform = `rotate(${s.a.toFixed(2)}deg)`
+      if (swingImg) {
+        // 内联 transform 必须带翻转因子：否则左半屏的 CSS scaleX(-1) 镜像被每帧内联覆写洗掉，
+        // 摸头/挤压动画（keyframes 带 var(--wg-flip)）一播放就出现"点击左右翻转"
+        swingImg.style.transform = `scaleX(var(--wg-flip, 1)) rotate(${s.a.toFixed(2)}deg)`
+      }
       if (infoModeRef.current === 'follow') {
         const k = 0.12
         const nx = infoPosRef.current.x + (anchor.x - infoPosRef.current.x) * k
@@ -614,7 +671,8 @@ export function WhaleWidget() {
                 infoVelRef.current = { x: n.x * 60, y: n.y * 60 }
               }
               // 对称：角色静止被面板撞到 → 角色进入甩抛（被撞飞，带面板动量）
-              if (!dragging && !flinging) {
+              // 中键弹弓蓄力中不参与：蓄力时角色本该被"按住"，被面板撞飞会让弹弓原地失联
+              if (!dragging && !flinging && !middleModeRef.current) {
                 const pvx = infoVelRef.current.x
                 const pvy = infoVelRef.current.y
                 if (Math.hypot(pvx, pvy) > 60) {
@@ -638,6 +696,7 @@ export function WhaleWidget() {
                     bounced = true
                     soundRef.current?.bounce()
                     shake()
+                    showEyes()
                     setBounceAxis(axis)
                     window.clearTimeout(bounceTimerRef.current)
                     bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
@@ -748,8 +807,8 @@ export function WhaleWidget() {
       if (infoElRef.current) {
         infoElRef.current.style.transform = `translate3d(${nx}px,${ny}px,0) scale(${config.linkScale ? config.widgetScale : config.infoScale})`
       }
-      // 拖拽面板撞到静止/吸附角色 → 角色获得动量（被撞飞）
-      if (!dragging && !flinging) {
+      // 拖拽面板撞到静止/吸附角色 → 角色获得动量（被撞飞）；中键弹弓蓄力中同样豁免
+      if (!dragging && !flinging && !middleModeRef.current) {
         const roleH = WIDGET_H * 0.78
         const roleCx = posRef.current.x + WIDGET_W / 2
         const roleCy = posRef.current.y + roleH / 2
@@ -796,12 +855,22 @@ export function WhaleWidget() {
     [config.infoScale, config.linkScale, config.widgetScale]
   )
   const getObstacle = useCallback(() => __wgInfoGlobal, [])
+  // 0.4.4 "><" 痛颜帧：撞墙/撞面板/点击时切换立绘 650ms（睡觉中不触发）
+  // ⚠️ 必须定义在 handleObstacleHit 等使用点之前——useCallback 依赖数组在渲染期求值，声明在后会 TDZ 崩溃
+  const showEyes = useCallback(() => {
+    if (sleepingRef.current) return
+    setPainOn(true)
+    window.clearTimeout(eyesTimerRef.current)
+    eyesTimerRef.current = window.setTimeout(() => setPainOn(false), 650)
+  }, [])
+
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
     // 角色撞到面板：面板获得角色入射动量（被撞飞，速度 = 角色速度 * 0.8）
+    showEyes()
     infoModeRef.current = 'free'
     infoVelRef.current = { x: invx * 0.8, y: invy * 0.8 }
     freeStartRef.current = performance.now()
-  }, [])
+  }, [showEyes])
   const onInfoUp = useCallback(
     (e: React.PointerEvent) => {
       if (!infoDragRef.current) return
@@ -885,6 +954,67 @@ export function WhaleWidget() {
     bounceTimerRef.current = window.setTimeout(() => setBounce(false), 300)
   }, [])
 
+  // 0.4.3 拖尾：中央 rAF 采样循环——差分 posRef 得到速度与移动距离，高速时每前进 16px 洒一颗光点
+  // 单一循环覆盖全部运动源（甩抛/绳摆/拖拽跟手/面板撞击）；速度越快单位时间过的 16px 越多 = 拖尾自动变长
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const step = (now: number) => {
+      const dt = Math.max(0.001, Math.min(0.05, (now - last) / 1000))
+      last = now
+      const layer = trailLayerRef.current
+      const p = posRef.current
+      if (!layer || sleepingRef.current) {
+        trailLastRef.current = null
+      } else {
+        const lt = trailLastRef.current
+        if (lt) {
+          const dist = Math.hypot(p.x - lt.x, p.y - lt.y)
+          const speed = dist / dt
+          // 任意速度贴墙 → "><"（视觉层暂撤，检测保留待立绘回归后接图帧切换）
+          if (speed > 80 && now > eyesCoolRef.current) {
+            const sc = cfgRef.current.widgetScale || 1
+            const vl = p.x + ((WIDGET_W * (1 - sc)) / 2)
+            const vt = p.y + ((WIDGET_H * (1 - sc)) / 2)
+            const nearWall =
+              vl <= 12 ||
+              vt <= 12 ||
+              vl + WIDGET_W * sc >= window.innerWidth - 12 ||
+              vt + WIDGET_H * sc >= window.innerHeight - 12
+            if (nearWall) {
+              showEyes()
+              eyesCoolRef.current = now + 700
+            }
+          }
+          if (speed > 250) {
+            lt.acc += dist
+            while (lt.acc >= 16 && trailCountRef.current < 36) {
+              lt.acc -= 16
+              const size = 7 + Math.min(9, speed / 400)
+              const dot = document.createElement('span')
+              dot.className = 'wg-trail-dot'
+              dot.style.width = dot.style.height = `${size.toFixed(1)}px`
+              dot.style.left = `${(p.x + WIDGET_W / 2 - size / 2).toFixed(1)}px`
+              dot.style.top = `${(p.y + WIDGET_H * 0.4 - size / 2).toFixed(1)}px`
+              layer.appendChild(dot)
+              trailCountRef.current++
+              window.setTimeout(() => {
+                dot.remove()
+                trailCountRef.current--
+              }, 520)
+            }
+          } else if (speed <= 40) {
+            lt.acc = 0 // 停下清欠账，防起步瞬间补射一串
+          }
+        }
+        trailLastRef.current = { x: p.x, y: p.y, acc: lt ? lt.acc : 0 }
+      }
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   /** 弹跳结束后：平滑吸附到最近侧边（保留当前垂直位置）。 */
   const snap = useCallback((x: number, y: number) => {
     const vw = window.innerWidth
@@ -930,10 +1060,11 @@ export function WhaleWidget() {
     reportEvent('bounce', { axis })
     soundRef.current?.bounce()
     shake()
+    showEyes()
     setBounceAxis(axis)
     window.clearTimeout(bounceTimerRef.current)
     bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
-  }, [reportEvent, shake])
+  }, [reportEvent, shake, showEyes])
 
   const startRopeSim = useCallback(() => {
     if (ropeRafRef.current) return
@@ -1113,6 +1244,10 @@ export function WhaleWidget() {
     // 等于在拖动期间把省电模式摘掉 —— 毛玻璃和漂浮动画全程烧着，而挂件还在每帧移动；
     // 而且 onPointerMove 挂在元素上，光是鼠标划过就会触发，churn 比拖动本身还频。
     // 空闲计时交给 onPointerDown 刷新即可（长按拖动超 60 秒让 eco 介入反而是想要的行为）。
+    //
+    // 与上游 0.4.3 的分歧（合并时保留本地）：上游写成 `if (dragRef.current) markActive()`，
+    // 意图是「哄睡后鼠标划过不吵醒」，但拖拽中依旧是每帧重建定时器 —— 正是本行要消掉的开销。
+    // 唤醒只认 pointerdown、悬停与划过一律不算，上游那条诉求已被这里覆盖。
     if (!dragRef.current) return
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {
@@ -1280,9 +1415,10 @@ export function WhaleWidget() {
       soundRef.current?.release()
       reportEvent('sound', { kind: 'release' })
 
-      // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）
+      // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）；点击=戳她 → "><" 痛颜（10/4 加大触发面：撞墙之外多一条日常触发）
       if (!moved) {
         reportEvent('click')
+        showEyes()
         setPetted(true)
         setPetKey((k) => k + 1)
         window.clearTimeout(petTimerRef.current)
@@ -1452,6 +1588,7 @@ export function WhaleWidget() {
             reportEvent('sound', { kind: 'bounce' })
             soundRef.current?.bounce()
             shake()
+            showEyes()
             setBounceAxis(axis)
             window.clearTimeout(bounceTimerRef.current)
             bounceTimerRef.current = window.setTimeout(() => setBounceAxis(null), 260)
@@ -1468,14 +1605,16 @@ export function WhaleWidget() {
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [reportEvent, shake, snap])
+  }, [reportEvent, shake, snap, showEyes])
 
   return (
     <>
       <style>{WIDGET_CSS}</style>
+      {/* 0.4.3 拖尾容器：fixed 图层压在角色(z-index 2147483647)之下 */}
+      <div className="wg-trail-layer" ref={trailLayerRef} />
       <div
         ref={rootRef}
-        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
+        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${sleeping ? ' wg-sleep' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
         style={
           {
             left: 0,
@@ -1499,7 +1638,15 @@ export function WhaleWidget() {
         {config.showWorkState && state.subagentRunning > 0 && (
           <div className="wg-subagent">分身×{state.subagentRunning}</div>
         )}
-        <img className="wg-img" src={imgSrc || '/dsh-whale-girl/whale-girl.png'} alt="鲸鱼娘" draggable={false} />
+        <img className="wg-img" src={sleeping ? WHALE_SLEEP_DATA_URL : painOn ? WHALE_PAIN_DATA_URL : WHALE_BASE_DATA_URL} alt="鲸鱼娘" draggable={false} />
+        {sleeping && (
+          <div className="wg-zzz">
+            <span>Z</span>
+            <span>z</span>
+            <span>z</span>
+          </div>
+        )}
+        {wakePop > 0 && <div className="wg-wakepop" key={wakePop} />}
         {petted && (
           <div className="wg-rua" key={petKey}>
             <img src={RUA_GIF_URL} alt="" draggable={false} />
@@ -1609,6 +1756,7 @@ export function WhaleWidget() {
           config={config}
           onChange={persistConfig}
           onResetPosition={resetPosition}
+          onSleep={() => setSleeping(true)}
           onClose={() => setMenu(null)}
           providers={providers}
           onSwitchProvider={handleSwitchProvider}
