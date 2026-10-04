@@ -99,6 +99,9 @@ const INFO_H = 66
 const INFO_RADIUS = 10
 /** 角色中心距屏幕水平边超过该值则不吸附（屏幕中间保持自由状态）。 */
 const EDGE_SNAP_MARGIN = 120
+/** 触屏点击容差：位移不超过它就算「点击」，不进入拖动/吸附路径。
+ *  手机手指抖动常有 5~10px，原值 6px 太紧 —— 单击会被误判成轻拖，松手时触发吸附。 */
+const TAP_SLOP = 14
 /** 信息面板独立状态维持时长（ms），之后尝试回归。 */
 const FREE_MS = 4000
 /** 信息面板当前矩形（共享给角色甩抛做障碍反馈）。 */
@@ -1411,7 +1414,7 @@ export function WhaleWidget() {
         return
       }
       const start = pressStartRef.current
-      const moved = start !== null && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 6
+      const moved = start !== null && Math.hypot(e.clientX - start.x, e.clientY - start.y) > TAP_SLOP
       // 0.4：松手速度优先取绳摆模拟的摆锤速度（真实摆动末速，比指针采样准确）
       const ropeV = ropeRef.current ? { vx: ropeRef.current.vx, vy: ropeRef.current.vy } : null
       stopRopeSim()
@@ -1574,8 +1577,13 @@ export function WhaleWidget() {
       const nw = window.innerWidth
       const nh = window.innerHeight
       const prev = posRef.current
-      const nx = Math.max(0, Math.min(prev.x, nw - WIDGET_W - 8))
-      const ny = Math.max(0, Math.min(prev.y, nh - WIDGET_H - 8))
+      // 缩放感知：拿裸尺寸算，每次 resize 都会把已经贴边的角色往屏幕内推
+      // （170 vs 170×0.65 = 110.5，差出近 60px）。而移动端"点一下"就可能触发 resize
+      // （浏览器 UI 收缩 / visualViewport 变化）—— 表现就是「点一下角色自己往边缘跑」。
+      const w = WIDGET_W * (scaleRef.current || 1)
+      const h = WIDGET_H * (scaleRef.current || 1)
+      const nx = Math.max(0, Math.min(prev.x, nw - w - 8))
+      const ny = Math.max(0, Math.min(prev.y, nh - h - 8))
       const dx = prev.x - nx
       const dy = prev.y - ny
       setPos({ x: nx, y: ny })
