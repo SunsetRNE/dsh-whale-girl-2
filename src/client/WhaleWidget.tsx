@@ -550,7 +550,11 @@ export function WhaleWidget() {
       s.v += sAcc * dt
       s.a += s.v * dt
       const swingImg = rootRef.current?.querySelector('.wg-img') as HTMLElement | null
-      if (swingImg) swingImg.style.transform = `rotate(${s.a.toFixed(2)}deg)`
+      if (swingImg) {
+        // 内联 transform 必须带翻转因子：否则左半屏的 CSS scaleX(-1) 镜像被每帧内联覆写洗掉，
+        // 摸头/挤压动画（keyframes 带 var(--wg-flip)）一播放就出现"点击左右翻转"
+        swingImg.style.transform = `scaleX(var(--wg-flip, 1)) rotate(${s.a.toFixed(2)}deg)`
+      }
       if (infoModeRef.current === 'follow') {
         const k = 0.12
         const nx = infoPosRef.current.x + (anchor.x - infoPosRef.current.x) * k
