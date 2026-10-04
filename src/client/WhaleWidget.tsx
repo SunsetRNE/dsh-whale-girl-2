@@ -161,9 +161,10 @@ function normalizeConfig(o: unknown): MenuConfig {
     followThreshold: Number.isFinite(Number(any.followThreshold)) ? Math.min(360, Math.max(60, Math.round(Number(any.followThreshold)))) : 180,
     infoFrost: Number.isFinite(Number(any.infoFrost)) ? Math.min(16, Math.max(0, Math.round(Number(any.infoFrost)))) : 4,
     pauseOnThinking: any.pauseOnThinking !== false,
-    widgetScale: Number.isFinite(Number(any.widgetScale)) ? Math.min(1.5, Math.max(0.6, Number(any.widgetScale))) : 1,
-    infoScale: Number.isFinite(Number(any.infoScale)) ? Math.min(1.5, Math.max(0.6, Number(any.infoScale))) : 1,
-    linkScale: any.linkScale === true,
+    // 手机端默认档：缺失字段回退到 0.65 / 0.75（不再是桌面口径的 1）
+    widgetScale: Number.isFinite(Number(any.widgetScale)) ? Math.min(1.5, Math.max(0.6, Number(any.widgetScale))) : 0.65,
+    infoScale: Number.isFinite(Number(any.infoScale)) ? Math.min(1.5, Math.max(0.6, Number(any.infoScale))) : 0.75,
+    linkScale: any.linkScale !== false,
     gravityMode: any.gravityMode === true,
     ropeMode: any.ropeMode === true,
     ropeK: Number.isFinite(Number(any.ropeK)) ? Math.min(200, Math.max(20, Number(any.ropeK))) : 80,
@@ -179,11 +180,12 @@ function normalizeConfig(o: unknown): MenuConfig {
     // 取整会把精度吃掉，表现为「滑块动了、边缘纹丝不动」。
     snapInset: Number.isFinite(Number(any.snapInset))
       ? Math.min(60, Math.max(0, Number(any.snapInset)))
-      : 12,
+      : 6,
     // 边缘保底留白：关掉贴边吸附后，越界夹取仍保留的最小距离（0 = 允许完全贴边）。
     // 与 snapInset 分开：snapInset 管「吸附后停在哪」，edgeGuard 管「能不能顶死」。
     edgeGuard: Number.isFinite(Number(any.edgeGuard)) ? Math.min(60, Math.max(0, Number(any.edgeGuard))) : 6,
-    snapOnRelease: any.snapOnRelease !== false,
+    // 手机端默认关（拖到哪停哪），要吸附在设置页打开
+    snapOnRelease: any.snapOnRelease === true,
     // 松手甩抛（惯性滑行）：默认关。旧行为是松手后按最后 120ms 的速度继续飞，
     // 摩擦只有 0.985/帧 → 800px/s 的轻甩能滑近千 px，最后钉在右下角，
     // 与「关掉贴边=拖到哪停哪」的直觉完全相反（真机反馈：一松手就往右下角掉）。

@@ -3,6 +3,25 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.4.9+mod.6] - 2026-10-04 · 手机端默认档回灌（用户整份配置落进默认值）
+
+### 做了什么
+- 用户从设置页「当前配置（全部字段）」把调好的整份配置发回（32 字段），逐字段核对与本机盘上 `/root/.dsh/.whale-girl-config.json` 一致后，写进两端默认值：
+  | 字段 | 旧默认（桌面口径） | 新默认（手机档） |
+  |---|---|---|
+  | `widgetScale` | 1 | **0.65** |
+  | `infoScale` | 1 | **0.75** |
+  | `linkScale` | false | **true** |
+  | `snapInset` | 12 | **6** |
+  | `snapOnRelease` | true | **false** |
+  | `edgeGuard` | 6（0.4.6 起） | 6（不变） |
+  | `flingOnRelease` | false（0.4.7 起） | false（不变） |
+- `DEFAULT_CONFIG`（宿主 `src/index.ts`）与 `DEFAULT_MENU_CONFIG`（客户端 `src/client/WidgetMenu.tsx`）两边同步，**避免双源漂移**（刷新前后两个样）
+- `normalizeConfig` 的缺字段回退也一并改成手机档：`widgetScale→0.65`、`infoScale→0.75`、`linkScale→!==false`、`snapInset→6`、`snapOnRelease→===true`
+- 本机盘上配置补齐缺失的两键（`edgeGuard` / `flingOnRelease`），与用户回灌的那份**逐字段全等**（32/32）；原文件已备份 `.whale-girl-config.json.bak-160350`
+- 新增 `tests/phoneDefaults.test.ts`（9 条）：源码级断言 8 个字段在宿主与客户端默认值里同时存在，另断言回退值是手机档 —— 谁改回桌面口径立刻红灯
+- 全套 **47 条通过**
+
 ## [0.4.8+mod.5] - 2026-10-04 · 定位坐标空间合一（松手漂向右下角的真因）
 
 ### 真因（插件日志 + 代码定位，非猜测）

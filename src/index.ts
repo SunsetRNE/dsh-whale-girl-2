@@ -185,9 +185,10 @@ const DEFAULT_CONFIG: WidgetConfig = {
   followThreshold: 180,
   infoFrost: 4,
   pauseOnThinking: true,
-  widgetScale: 1,
-  infoScale: 1,
-  linkScale: false,
+  // ── 手机端默认档（2026-10-04 由设置页「当前配置」回灌，见 CHANGELOG 0.4.9）──
+  widgetScale: 0.65,
+  infoScale: 0.75,
+  linkScale: true,
   gravityMode: false,
   ropeMode: false,
   ropeK: 80,
@@ -197,8 +198,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   groundFriction: 0.95,
   deepSleep: true,
   snapMargin: 0,
-  snapInset: 12,
-  snapOnRelease: true,
+  snapInset: 6,
+  snapOnRelease: false,
   edgeGuard: 6,
   flingOnRelease: false
 }
@@ -226,9 +227,10 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     followThreshold: Number.isFinite(Number(o.followThreshold)) ? Math.min(360, Math.max(60, Math.round(Number(o.followThreshold)))) : 180,
     infoFrost: Number.isFinite(Number(o.infoFrost)) ? Math.min(16, Math.max(0, Math.round(Number(o.infoFrost)))) : 4,
     pauseOnThinking: o.pauseOnThinking !== false,
-    widgetScale: Number.isFinite(Number(o.widgetScale)) ? Math.min(1.5, Math.max(0.6, Number(o.widgetScale))) : 1,
-    infoScale: Number.isFinite(Number(o.infoScale)) ? Math.min(1.5, Math.max(0.6, Number(o.infoScale))) : 1,
-    linkScale: o.linkScale === true,
+    // 手机端默认档：缺失字段回退到 0.65 / 0.75（不再是桌面口径的 1）
+    widgetScale: Number.isFinite(Number(o.widgetScale)) ? Math.min(1.5, Math.max(0.6, Number(o.widgetScale))) : 0.65,
+    infoScale: Number.isFinite(Number(o.infoScale)) ? Math.min(1.5, Math.max(0.6, Number(o.infoScale))) : 0.75,
+    linkScale: o.linkScale !== false,
     gravityMode: o.gravityMode === true,
     ropeMode: o.ropeMode === true,
     ropeK: Number.isFinite(Number(o.ropeK)) ? Math.min(200, Math.max(20, Number(o.ropeK))) : 80,
@@ -243,11 +245,11 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     // 0 是合法值（完全贴边），因此不能用 `|| 12` 兜底。
     // 不再 Math.round：最细步进 = 1 物理像素 = 1/dpr dp（dpr=2.625 时 0.381），
     // 宿主侧取整会把精度吃掉 —— 设置页调了小数、落盘后被抹平，边缘纹丝不动。
-    snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Number(o.snapInset))) : 12,
+    snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Number(o.snapInset))) : 6,
     // 边缘保底留白：关掉贴边吸附后越界夹取仍保留的最小距离（0 = 允许完全贴边）
     edgeGuard: Number.isFinite(Number(o.edgeGuard)) ? Math.min(60, Math.max(0, Number(o.edgeGuard))) : 6,
-    // 松手吸附开关：默认开（保持原行为），关掉就是「拖到哪停哪」
-    snapOnRelease: o.snapOnRelease !== false,
+    // 松手吸附开关：手机端默认关（拖到哪停哪），要吸附在设置页打开
+    snapOnRelease: o.snapOnRelease === true,
     // 松手甩抛：默认关 —— 旧行为是松手后按末速继续滑（摩擦 0.985/帧，800px/s 的轻甩可滑近千 px）钉在角落
     flingOnRelease: o.flingOnRelease === true
   }
