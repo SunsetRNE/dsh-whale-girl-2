@@ -1536,7 +1536,7 @@ export function WhaleWidget() {
                 }
               })
             } else {
-              snap(rect.left, rect.top)
+              snap(posRef.current.x, posRef.current.y)
             }
           }
         }
@@ -1706,7 +1706,7 @@ export function WhaleWidget() {
             }
           })
         } else if (rect) {
-          snap(rect.left, rect.top)
+          snap(posRef.current.x, posRef.current.y)
         }
       }
 
