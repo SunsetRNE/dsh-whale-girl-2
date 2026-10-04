@@ -142,6 +142,8 @@ export interface WidgetConfig {
   linkScale: boolean
   /** 边缘吸附范围（px）：0 = 按视口自动（窄屏自动收窄），>0 = 手动指定 */
   snapMargin: number
+  /** 贴边留白（px）：角色与屏幕边缘之间至少留这么多 —— 用来让挂件/徽章/气泡不顶着屏幕边 */
+  snapInset: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -188,7 +190,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   bounceE: 1,
   groundFriction: 0.95,
   deepSleep: true,
-  snapMargin: 0
+  snapMargin: 0,
+  snapInset: 12
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -227,7 +230,9 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     deepSleep: o.deepSleep !== false,
     snapMargin: Number.isFinite(Number(o.snapMargin))
       ? Math.min(200, Math.max(0, Math.round(Number(o.snapMargin))))
-      : 0
+      : 0,
+    // 0 是合法值（完全贴边），因此不能用 `|| 12` 兜底
+    snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(o.snapInset)))) : 12
   }
 }
 

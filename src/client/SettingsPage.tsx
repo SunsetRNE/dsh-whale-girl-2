@@ -149,6 +149,25 @@ export function SettingsPage(): React.ReactElement {
             </div>
           </div>
 
+          <div style={{ marginTop: 12, marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>贴边留白</span>
+              <code>{num('snapInset', 12) + 'px'}</code>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={60}
+              step={2}
+              value={num('snapInset', 12)}
+              onChange={(e) => queue({ snapInset: Number(e.target.value) })}
+              style={{ width: '100%' }}
+            />
+            <div style={{ opacity: 0.55, fontSize: 12 }}>
+              角色与屏幕边缘的最小距离 —— 嫌"贴太死"就往右拉（12~20 观感较稳），拉到 0 才是完全贴边
+            </div>
+          </div>
+
           <p style={{ opacity: 0.6, margin: '12px 0 0' }}>
             {saving ? '保存中…' : '已保存'} · 挂件在挂载时读取配置，刷新页面即生效。
           </p>

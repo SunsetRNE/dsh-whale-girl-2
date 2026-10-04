@@ -173,7 +173,8 @@ function normalizeConfig(o: unknown): MenuConfig {
     deepSleep: any.deepSleep !== false,
     snapMargin: Number.isFinite(Number(any.snapMargin))
       ? Math.min(200, Math.max(0, Math.round(Number(any.snapMargin))))
-      : 0
+      : 0,
+    snapInset: Number.isFinite(Number(any.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(any.snapInset)))) : 12
   }
 }
 
@@ -196,8 +197,8 @@ export function WhaleWidget() {
     const w = WIDGET_W * config.widgetScale
     const h = WIDGET_H * config.widgetScale
     return {
-      x: Math.max(8, window.innerWidth - w - 8),
-      y: Math.max(8, window.innerHeight - h - INFO_H - 42)
+      x: Math.max(config.snapInset, window.innerWidth - w - config.snapInset),
+      y: Math.max(config.snapInset, window.innerHeight - h - INFO_H - 42)
     }
   })
   // 信息面板：独立窗口（默认跟随角色；距离超阈值或直接拖拽则脱离）
@@ -317,6 +318,9 @@ export function WhaleWidget() {
   // 收尾（抬手 / 动画结束）再 setPos 一次把 state 同步回来。
   const scaleRef = useRef(config.widgetScale)
   scaleRef.current = config.widgetScale
+  // 贴边留白：吸附与 resize 这些非 React 路径都从 ref 取最新值
+  const insetRef = useRef(config.snapInset)
+  insetRef.current = config.snapInset
   const pressedRef = useRef(pressed)
   pressedRef.current = pressed
   const moveTo = useCallback((x: number, y: number) => {
@@ -928,8 +932,8 @@ export function WhaleWidget() {
     const w = WIDGET_W * config.widgetScale
     const h = WIDGET_H * config.widgetScale
     setPos({
-      x: Math.max(8, window.innerWidth - w - 8),
-      y: Math.max(8, window.innerHeight - h - INFO_H - 42)
+      x: Math.max(config.snapInset, window.innerWidth - w - config.snapInset),
+      y: Math.max(config.snapInset, window.innerHeight - h - INFO_H - 42)
     })
     setMenu(null)
   }, [config.widgetScale])
@@ -1029,8 +1033,11 @@ export function WhaleWidget() {
     // 缩放感知：角色视觉尺寸是 WIDGET_W×scale，边界必须同乘 —— 否则缩小后会停在
     // 离边 (1-scale)×WIDGET_W 的位置（scale=0.65 时右侧空出约 60px，表现为「到不了屏幕边缘」）。
     const sc = scaleRef.current || 1
-    const px = Math.max(8, Math.min(vw - WIDGET_W * sc - 8, x))
-    const py = Math.max(8, Math.min(vh - WIDGET_H * sc - 8, y))
+    // 贴边留白：角色与屏幕边保持 config.snapInset（默认 12px）。
+    // 原来写死 8px —— 手机屏上等于"贴死"，挂件本体与贴边徽章的视觉元素会顶到屏幕边。
+    const ins = insetRef.current
+    const px = Math.max(ins, Math.min(vw - WIDGET_W * sc - ins, x))
+    const py = Math.max(ins, Math.min(vh - WIDGET_H * sc - ins, y))
     // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）。
     // 缩放必须一起算：拿裸尺寸算会让判定范围虚高 (1/scale - 1)，scale=0.65 时约 +54% ——
     // 角色离边还有一大截就被判成「已经在边上」，于是被吸过去（表现为手动一拖就往边缘靠）。
@@ -1063,8 +1070,8 @@ export function WhaleWidget() {
       setPos({ x: px, y: py })
       return
     }
-    const left = x + (WIDGET_W * sc) / 2 < vw / 2 ? 8 : vw - WIDGET_W * sc - 8
-    setPos({ x: Math.max(8, left), y: Math.max(8, Math.min(vh - WIDGET_H * sc - 8, y)) })
+    const left = x + (WIDGET_W * sc) / 2 < vw / 2 ? ins : vw - WIDGET_W * sc - ins
+    setPos({ x: Math.max(ins, left), y: Math.max(ins, Math.min(vh - WIDGET_H * sc - ins, y)) })
   }, [config.snapMargin])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。

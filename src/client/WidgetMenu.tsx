@@ -37,6 +37,8 @@ export interface MenuConfig {
   linkScale: boolean
   /** 边缘吸附范围（px）：0 = 按视口自适应，>0 = 手动指定 */
   snapMargin: number
+  /** 贴边留白（px）：角色与屏幕边缘的最小距离，防止挂件/徽章顶着屏幕边 */
+  snapInset: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -89,6 +91,7 @@ export const DEFAULT_MENU_CONFIG: MenuConfig = {
   infoScale: 1,
   linkScale: false,
   snapMargin: 0,
+  snapInset: 12,
   gravityMode: false,
   ropeMode: false,
   ropeK: 80,
