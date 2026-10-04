@@ -2,6 +2,7 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { WhaleWidget } from './WhaleWidget'
+import { SettingsPage } from './SettingsPage'
 
 export const name = 'dsh-whale-girl-2'
 
@@ -98,6 +99,15 @@ export function apply(ctx: any) {
         )
       )
       cdiag('registered into shell.overlay as whale-girl-widget')
+      // 设置页：注册进 settings.section —— 该 slot 由 @deepseek-ai/dsh-client-ui-settings 声明，
+      // 由 ui-settings-general 渲染设置外壳与左侧导航。id 唯一即可，order 决定导航排序。
+      slots.inject('settings.section', () =>
+        slots.register(
+          { name: 'settings.section', id: 'whale-girl', order: 90, label: () => '鲸鱼娘' },
+          SettingsPage
+        )
+      )
+      cdiag('registered settings.section as whale-girl')
       return
     }
     // slots 对象在、但不含 inject/register（宿主版本漂移）→ 同样退回直挂，不静默。
