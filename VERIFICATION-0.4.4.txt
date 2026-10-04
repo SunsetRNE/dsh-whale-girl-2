@@ -1,6 +1,6 @@
 dsh-whale-girl 合并版装载实测记录（0.4.4 + 本地二改）
 分支 merge-0.4.4 @ 合并提交 37ee6c9
-实测时刻：2026-10-04 11:03–11:06（本机 DSH web 世代 11 / node v24.19.0）
+实测时刻：2026-10-04 11:03–11:07（本机 DSH web 世代 11 → 13 / node v24.19.0）
 运行副本：/root/Project-Integrated-Workspace/dsh-whale-girl-local（profile 软链指向）
 
 ============================================================
@@ -54,7 +54,17 @@ diag 留痕：三条 "select-model <值>/m ok=false"
       （\n \r \t 具名，其余 \xNN），diag() 落盘前统一过一遍。
 验证：node scripts/build.mjs 通过；escapeLog 在 lib/index.js 中出现 2 处；
       复现单测——含换行输入转义后 split("\n").length === 1 成立。
-注意：本修复需**下次重启**才在运行实例中生效（当前进程仍持修复前代码）。
+运行态复验（重启后闭环，2026-10-04 11:07）：
+  进程世代 DSHA_WEB_GENERATION 11 → 13，[11:07:10.882Z] apply-ok 加载成功
+  同一条输入 {"provider":"a\nb","model":"m"} → {"ok":false}
+  日志对比：
+    修复前 11:05:16  [11:05:16.795Z] select-model a
+                     b/m ok=false                        ← 一条记录被拆成两行
+    修复后 11:07:29  [11:07:29.279Z] select-model a\nb/m ok=false   ← 单行，换行已转义
+  重启后同批复核：apply-ok=4 / register-skip=0 / error|throw=0
+                  /api/config 仍含 "deepSleep":true（版本证据不因重启改变）
+                  settings.yaml 未创建、无 .bak（零副作用）
+                  /etc/hosts 两行俱在（本次为进程级重启，容器未重建）
 
 ============================================================
 六、本轮验证未覆盖（各有前置条件，非缺口）
@@ -63,7 +73,7 @@ diag 留痕：三条 "select-model <值>/m ok=false"
 - 客户端挂载路径：需在 GUI 页面控制台执行 copy(JSON.stringify(window.__wgClientDiag))，
   期望含 "mount ok" 或 "registered into shell.overlay"
 - 热路径直写 transform 的帧率收益：需 Performance 面板录制拖动过程，与 0.4.2 基线对比
-- 日志注入修复的运行态复验：下次重启后重发 {"provider":"a\nb"} 看日志行数
+（日志注入修复的运行态复验已于 11:07 完成，见第五节）
 
 ============================================================
 七、回滚
