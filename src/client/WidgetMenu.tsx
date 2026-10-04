@@ -102,7 +102,7 @@ interface Props {
   config: MenuConfig
   onChange: (next: MenuConfig) => void
   onResetPosition: () => void
-  /** beta 专属：立刻哄睡（0.4.3 正式版移除） */
+  /** 立刻哄睡（0.4.3 起转正：等不及自然入睡的一键入口） */
   onSleep?: () => void
   onClose: () => void
   /** API 提供方列表（null = 尚未加载）。 */
@@ -408,8 +408,7 @@ export function WidgetMenu({ x, y, config, onChange, onResetPosition, onSleep, o
       </div>
       <div className="wg-menu-divider" />
       <div className="wg-menu-item" onClick={onResetPosition}>↺ 恢复默认位置</div>
-      {/* TODO 0.4.3 正式版：移除哄睡按钮（beta 试玩专属） */}
-      {onSleep && <div className="wg-menu-item" onClick={() => { onSleep(); onClose() }}>😴 立刻哄睡（beta）</div>}
+      <div className="wg-menu-item" onClick={() => { onSleep(); onClose() }}>😴 立刻哄睡</div>
     </div>
   )
 }
