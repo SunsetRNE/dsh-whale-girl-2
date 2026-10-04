@@ -91,11 +91,14 @@ export function SettingsPage(): React.ReactElement {
 
   React.useEffect(() => {
     const onReply = (e: MessageEvent) => {
-      const d = (e.data || {}) as { __wgReply?: string; inset?: number; physPx?: number }
+      const d = (e.data || {}) as { __wgReply?: string; inset?: number; physPx?: number; field?: string }
       if (d.__wgReply !== 'measureInset' || typeof d.inset !== 'number') return
-      setMeasured(`${d.inset.toFixed(3)} dp = ${d.physPx ?? Math.round(d.inset * dpr)} 物理px`)
+      const isGuard = d.field === 'edgeGuard'
+      setMeasured(
+        `${isGuard ? '边缘保底' : '贴边留白'} ← ${d.inset.toFixed(3)} dp = ${d.physPx ?? Math.round(d.inset * dpr)} 物理px`
+      )
       // 只同步显示，不再 POST —— 挂件那边已经 persistConfig 落盘，两边同时写会打架
-      setCfg((c) => (c === null ? c : { ...c, snapInset: d.inset }))
+      setCfg((c) => (c === null ? c : isGuard ? { ...c, edgeGuard: d.inset } : { ...c, snapInset: d.inset }))
     }
     window.addEventListener('message', onReply)
     return () => window.removeEventListener('message', onReply)
@@ -249,6 +252,51 @@ export function SettingsPage(): React.ReactElement {
             )}
             <div style={{ opacity: 0.55, fontSize: 12 }}>
               角色与屏幕边缘的最小距离 —— 嫌"贴太死"就往右拉（12~20 观感较稳），拉到 0 才是完全贴边
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>边缘保底留白（关掉吸附也生效）</span>
+              <code>{num('edgeGuard', 6).toFixed(2)} dp = {Math.round(num('edgeGuard', 6) * dpr)} 物理px</code>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={step}
+                value={num('edgeGuard', 6)}
+                onChange={(e) => queue({ edgeGuard: Number(e.target.value) })}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                max={40}
+                step={step}
+                value={Number(num('edgeGuard', 6).toFixed(3))}
+                onChange={(e) => queue({ edgeGuard: Math.max(0, Math.min(40, Number(e.target.value) || 0)) })}
+                style={{ width: 72 }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              {[0, 3, 6, 9, 12, 18].map((v) => (
+                <button key={v} onClick={() => queue({ edgeGuard: v })} style={{ padding: '2px 8px' }}>
+                  {v}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  setMeasured('测量中…')
+                  window.postMessage({ __wgCmd: 'measureInset' }, '*')
+                }}
+              >
+                以挂件当前位置为准
+              </button>
+            </div>
+            <div style={{ opacity: 0.55, fontSize: 12 }}>
+              0 = 允许完全贴边（旧行为）；大于 0 = 怎么拖都留一条缝。吸附开着时上面那个按钮写「贴边留白」，关着时写这里。
             </div>
           </div>
 

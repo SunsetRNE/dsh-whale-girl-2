@@ -10,7 +10,7 @@ import { FlingTracker, startFling } from './PhysicsFling'
 import { WHALE_BASE_DATA_URL, WHALE_SLEEP_DATA_URL, WHALE_PAIN_DATA_URL } from './whalePoseDataUrls'
 import { RUA_GIF_URL } from './ruaDataUrl'
 import { WidgetMenu, MenuConfig, DEFAULT_MENU_CONFIG, ProviderRow } from './WidgetMenu'
-import { measureInset, renderScale, safeDpr, stopPos } from './edgeSnap'
+import { clampPos, guardBounds, measureInset, renderScale, safeDpr, stopPos } from './edgeSnap'
 
 const EMPTY_STATE: WhaleState = {
   balance: null,
@@ -180,6 +180,9 @@ function normalizeConfig(o: unknown): MenuConfig {
     snapInset: Number.isFinite(Number(any.snapInset))
       ? Math.min(60, Math.max(0, Number(any.snapInset)))
       : 12,
+    // 边缘保底留白：关掉贴边吸附后，越界夹取仍保留的最小距离（0 = 允许完全贴边）。
+    // 与 snapInset 分开：snapInset 管「吸附后停在哪」，edgeGuard 管「能不能顶死」。
+    edgeGuard: Number.isFinite(Number(any.edgeGuard)) ? Math.min(60, Math.max(0, Number(any.edgeGuard))) : 6,
     snapOnRelease: any.snapOnRelease !== false
   }
 }
@@ -590,9 +593,21 @@ export function WhaleWidget() {
       const w = WIDGET_W * renderScale(WIDGET_W, scaleRef.current, dpr)
       const p = posRef.current
       const ins = measureInset(p.x, w, window.innerWidth, dpr)
-      persistConfig({ ...configRef.current, snapInset: ins })
+      // 写回「当前真正管用的那个」：吸附开着写 snapInset（停靠留白），吸附关着写 edgeGuard（保底留白）
+      const c = configRef.current
+      const snapped = c.snapOnRelease !== false && c.snapMargin > 0
+      persistConfig(snapped ? { ...c, snapInset: ins } : { ...c, edgeGuard: ins })
       try {
-        window.postMessage({ __wgReply: 'measureInset', inset: ins, dpr, physPx: Math.round(ins * dpr) }, '*')
+        window.postMessage(
+          {
+            __wgReply: 'measureInset',
+            inset: ins,
+            field: snapped ? 'snapInset' : 'edgeGuard',
+            dpr,
+            physPx: Math.round(ins * dpr)
+          },
+          '*'
+        )
       } catch {
         // ignore
       }
@@ -1075,8 +1090,12 @@ export function WhaleWidget() {
     // 越界兜底用 **0 边距**：inset 只决定「吸附后的停靠位」，不该在非吸附时把角色往屏幕内推。
     // 旧写法用 ins 夹取 —— 于是即便关了吸附，松手时角色仍被推离边缘 ins 像素，
     // 看起来就是「关闭贴边吸附没用」（日志实测：margin=0 时仍有 edgeDist=-2 被夹回）。
-    const px = Math.max(0, Math.min(vw - WIDGET_W * sc, x))
-    const py = Math.max(0, Math.min(vh - WIDGET_H * sc, y))
+    // 越界夹取：用 edgeGuard 保底留白（0 = 允许完全贴边）。旧式硬编码 0 —— 实测贴边关闭时
+    // 角色能一路顶到屏幕边（右缘空白 0 px），看着就是立绘被裁掉一截。
+    const d = safeDpr(window.devicePixelRatio)
+    const gb = guardBounds(vw, vh, WIDGET_W, WIDGET_H, sc, config.edgeGuard, d)
+    const px = clampPos(x, gb.xLo, gb.xHi, d)
+    const py = clampPos(y, gb.yLo, gb.yHi, d)
     // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）。
     // 缩放必须一起算：拿裸尺寸算会让判定范围虚高 (1/scale - 1)，scale=0.65 时约 +54% ——
     // 角色离边还有一大截就被判成「已经在边上」，于是被吸过去（表现为手动一拖就往边缘靠）。
@@ -1128,11 +1147,11 @@ export function WhaleWidget() {
       scale: sc,
       ins,
       side: x + (WIDGET_W * sc) / 2 < vw / 2 ? 'left' : 'right',
-      dpr: safeDpr(window.devicePixelRatio)
+      dpr: d
     })
     // y 上格后再用底部留白钳制；stop.y 与 stop.maxY 都是整物理格
     setPos({ x: stop.x, y: Math.max(stop.y, Math.min(stop.maxY, y)) })
-  }, [config.snapMargin, config.snapOnRelease])
+  }, [config.snapMargin, config.snapOnRelease, config.edgeGuard])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。
   //

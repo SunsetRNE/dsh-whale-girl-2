@@ -93,6 +93,41 @@ export function stopPos(o: StopInput): StopResult {
  * 拖拽反推：按当前落点算「你看着顺眼的那条留白」，并吸到整物理像素。
  * 这是省掉手调数字的主路径 —— 拖到位 → 一键写回 snapInset。
  */
+
+/** 夹取到 [lo, hi] 并吸到物理像素格（lo / hi 应已含留白） */
+export const clampPos = (v: number, lo: number, hi: number, dpr: number): number =>
+  alignEdge(Math.max(lo, Math.min(hi, v)), dpr)
+
+/**
+ * 越界夹取用的边界（关掉贴边吸附时走这条路）：`guard` = 边缘保底留白。
+ * guard=0 → 允许完全贴边（0.4.4 的「拖到哪停哪」）；guard>0 → 怎么拖都留一条缝，
+ * 免得立绘顶死在屏幕边上（截图实测：贴边关闭时右缘空白 = 0 px，看着就是被裁掉一截）。
+ */
+export function guardBounds(
+  vw: number,
+  vh: number,
+  baseW: number,
+  baseH: number,
+  scale: number,
+  guard: number,
+  dpr: number
+): { sc: number; w: number; h: number; xLo: number; xHi: number; yLo: number; yHi: number } {
+  const d = safeDpr(dpr)
+  const sc = renderScale(baseW, scale, d)
+  const w = baseW * sc
+  const h = baseH * sc
+  const g = alignEdge(Math.max(0, guard), d)
+  return {
+    sc,
+    w,
+    h,
+    xLo: g,
+    xHi: alignEdge(vw - g, d) - w,
+    yLo: g,
+    yHi: alignEdge(vh - g, d) - h
+  }
+}
+
 export function measureInset(x: number, w: number, vw: number, dpr: number): number {
   const d = safeDpr(dpr)
   const left = x

@@ -3,6 +3,20 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.4.6+mod.3] - 2026-10-04 · 边缘保底留白 edgeGuard
+
+### 问题（真机截图实测）
+- 贴边关闭（`snapMargin=0`、`snapOnRelease=false`）时，越界夹取用的是**硬编码 0 边距** → 角色能一路顶到屏幕边
+- 1080 宽截图逐列统计：右缘空白 = **0 px**（最右 60 列每列都有 300+ 个非背景像素 = 立绘贴着屏幕边被切）；对比「理想态」那张同位置留出可见缝隙 —— 观感就是被裁掉一截
+
+### 修复
+- 新增配置 `edgeGuard`（dp，默认 6，**0 = 允许完全贴边**，即 0.4.4 行为）：越界夹取用它保底，吸附停靠仍由 `snapInset` 管 —— 两个旋钮分开，互不干扰
+- 宿主 `WidgetConfig` / `DEFAULT_CONFIG`、客户端 `MenuConfig` / `DEFAULT_MENU_CONFIG` / `normalizeConfig` 五处同步 schema 与默认值
+- `edgeSnap.ts` 新增 `guardBounds()` 与 `clampPos()`：夹取上下界与结果都吸到物理像素格
+- 设置页新增「边缘保底留白」控件（步进 1 物理像素、档位 0/3/6/9/12/18、dp/物理px 双读数）
+- 「以挂件当前位置为准」按当前模式自动选定写回字段：吸附开启 → `snapInset`，关闭 → `edgeGuard`，回执带字段名
+- 单测 +1（`edgeGuard=0` 允许贴边 / `6dp@dpr3` 停在 18 物理px 且右缘整格）；全套 **32 条通过**
+
 ## [0.4.5+mod.2] - 2026-10-04 · 贴边留白改物理像素对齐
 
 ### 问题

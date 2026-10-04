@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   alignEdge,
   alignSize,
+  clampPos,
   formatInset,
+  guardBounds,
   measureInset,
   renderScale,
   safeDpr,
@@ -79,5 +81,21 @@ describe('贴边停靠的物理像素对齐', () => {
     expect(safeDpr(0)).toBe(1)
     expect(safeDpr(Number.NaN)).toBe(1)
     expect(alignSize(110.5, 3)).toBeCloseTo(332 / 3, 6)
+  })
+
+  it('越界夹取用 edgeGuard 保底留白（关掉吸附后不再顶死）', () => {
+    const dpr = 3
+    const vw = 360
+    const vh = 800
+    const g0 = guardBounds(vw, vh, W, H, SC, 0, dpr)
+    const g6 = guardBounds(vw, vh, W, H, SC, 6, dpr)
+    // guard=0 → 旧行为：允许完全贴边
+    expect(clampPos(-50, g0.xLo, g0.xHi, dpr)).toBe(0)
+    // guard=6dp（dpr=3）→ 拖到最左也停在 18 物理px
+    expect(Math.round(clampPos(-50, g6.xLo, g6.xHi, dpr) * dpr)).toBe(18)
+    // 右侧同理，且右边整格
+    const right = clampPos(9999, g6.xLo, g6.xHi, dpr)
+    expect(isGrid(right + g6.w, dpr)).toBe(true)
+    expect(Math.round((vw - (right + g6.w)) * dpr)).toBe(18)
   })
 })

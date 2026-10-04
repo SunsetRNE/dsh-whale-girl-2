@@ -39,6 +39,8 @@ export interface MenuConfig {
   snapMargin: number
   /** 贴边留白（px）：角色与屏幕边缘的最小距离，防止挂件/徽章顶着屏幕边 */
   snapInset: number
+  /** 边缘保底留白（dp）：关掉贴边吸附后，越界夹取仍保留的最小距离（0 = 允许完全贴边） */
+  edgeGuard: number
   /** 松手时是否吸附到最近侧边：false = 拖到哪停哪 */
   snapOnRelease: boolean
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
@@ -95,6 +97,7 @@ export const DEFAULT_MENU_CONFIG: MenuConfig = {
   snapMargin: 0,
   snapInset: 12,
   snapOnRelease: true,
+  edgeGuard: 6,
   gravityMode: false,
   ropeMode: false,
   ropeK: 80,

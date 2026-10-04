@@ -146,6 +146,8 @@ export interface WidgetConfig {
   snapInset: number
   /** 松手时是否吸附到最近侧边：关掉 = 拖到哪就停哪（仅越界时夹回屏内） */
   snapOnRelease: boolean
+  /** 边缘保底留白（dp）：关掉吸附后越界夹取仍保留的最小距离（0 = 允许完全贴边） */
+  edgeGuard: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -194,7 +196,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   deepSleep: true,
   snapMargin: 0,
   snapInset: 12,
-  snapOnRelease: true
+  snapOnRelease: true,
+  edgeGuard: 6
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -238,6 +241,8 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     // 不再 Math.round：最细步进 = 1 物理像素 = 1/dpr dp（dpr=2.625 时 0.381），
     // 宿主侧取整会把精度吃掉 —— 设置页调了小数、落盘后被抹平，边缘纹丝不动。
     snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Number(o.snapInset))) : 12,
+    // 边缘保底留白：关掉贴边吸附后越界夹取仍保留的最小距离（0 = 允许完全贴边）
+    edgeGuard: Number.isFinite(Number(o.edgeGuard)) ? Math.min(60, Math.max(0, Number(o.edgeGuard))) : 6,
     // 松手吸附开关：默认开（保持原行为），关掉就是「拖到哪停哪」
     snapOnRelease: o.snapOnRelease !== false
   }
