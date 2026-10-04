@@ -1027,8 +1027,10 @@ export function WhaleWidget() {
     const sc = scaleRef.current || 1
     const px = Math.max(8, Math.min(vw - WIDGET_W * sc - 8, x))
     const py = Math.max(8, Math.min(vh - WIDGET_H * sc - 8, y))
-    // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）
-    const edgeDist = Math.min(x, vw - (x + WIDGET_W))
+    // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）。
+    // 缩放必须一起算：拿裸尺寸算会让判定范围虚高 (1/scale - 1)，scale=0.65 时约 +54% ——
+    // 角色离边还有一大截就被判成「已经在边上」，于是被吸过去（表现为手动一拖就往边缘靠）。
+    const edgeDist = Math.min(x, vw - (x + WIDGET_W * sc))
     // 吸附范围：snapMargin > 0 时用手动值，否则按视口自动收窄。
     // 固定 120px 是桌面取值 —— 手机竖屏宽约 380px 时它盖住屏幕中央近三分之一，
     // 角色落在中间就判定「不吸附」，表现就是挂件甩不到边上。
@@ -1451,8 +1453,8 @@ export function WhaleWidget() {
             y: rect.top,
             vx: vel.vx,
             vy: vel.vy,
-            width: WIDGET_W,
-            height: WIDGET_H,
+            width: WIDGET_W * (scaleRef.current || 1),
+            height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
             gravity: config.gravityMode ? 2400 : undefined,
             groundFriction: config.groundFriction,
@@ -1494,8 +1496,8 @@ export function WhaleWidget() {
             y: rect.top,
             vx: vel ? vel.vx * 0.5 : 0,
             vy: vel ? vel.vy * 0.5 : 0,
-            width: WIDGET_W,
-            height: WIDGET_H,
+            width: WIDGET_W * (scaleRef.current || 1),
+            height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
             gravity: 2400,
             groundFriction: config.groundFriction,
@@ -1531,8 +1533,8 @@ export function WhaleWidget() {
             y: rect.top,
             vx: vel ? vel.vx * 0.5 : 0,
             vy: vel ? vel.vy * 0.5 : 0,
-            width: WIDGET_W,
-            height: WIDGET_H,
+            width: WIDGET_W * (scaleRef.current || 1),
+            height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
             gravity: 2400,
             groundFriction: config.groundFriction,
@@ -1585,8 +1587,8 @@ export function WhaleWidget() {
           y: ny,
           vx: dx * 5,
           vy: dy * 5,
-          width: WIDGET_W,
-          height: WIDGET_H,
+          width: WIDGET_W * (scaleRef.current || 1),
+          height: WIDGET_H * (scaleRef.current || 1),
           bounceE: config.bounceE,
           gravity: config.gravityMode ? 2400 : undefined,
           groundFriction: config.groundFriction,

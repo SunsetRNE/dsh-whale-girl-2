@@ -264,13 +264,13 @@ export const WIDGET_CSS = `
   object-fit: contain;
   display: block;
 }
-/* 抚摸时角色明显上下压缩一次（立即，无漂浮抖动） */
+/* 抚摸反馈：不动 transform，避免顶掉 .wg-img 上的 wg-float。
+   原实现是 animation: wg-pet-stretch（scaleY 挤压 0.1s），但 animation 是简写属性，
+   它会把 wg-float（3.4s 漂浮）整条覆盖掉：摸头这 260ms 内 translateY 归零，
+   结束、.wg-pet 移除后 wg-float 又从 0% 重新开始 —— 视觉上就是「点一下角色往下跳一下」。
+   改为滤镜反馈：有触感，且完全不碰 transform。 */
 .wg-pet .wg-img {
-  animation: wg-pet-stretch 0.1s ease-in-out 1;
-}
-@keyframes wg-pet-stretch {
-  0%, 100% { transform: scaleX(var(--wg-flip, 1)) scaleY(1); }
-  50% { transform: scaleX(var(--wg-flip, 1)) scaleY(0.85); }
+  filter: drop-shadow(0 7px 15px rgba(30, 50, 120, 0.3)) brightness(1.07) saturate(1.05);
 }
 @keyframes wg-rua-pat {
   0% { transform: translateX(-50%) translateY(0); }
