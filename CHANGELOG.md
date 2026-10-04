@@ -1,5 +1,10 @@
 # 更新日志
 
+## [0.4.3-beta.3] - 2026-10-04 ⚠️ Beta
+
+### 修复
+- **官方 Desktop 挂件无声消失**：官方 web-app 不提供 slots 服务，客户端 `ctx.get('slots')` 为空即静默 return。现在双路挂载——有 slots 走原 slot+portal（第三方宿主不变），无 slots 直接 React root 挂到 body 顶层；并加 mount 点防重入（配合 beta.2 的双激活容错，双路径 loader 下也只挂一个）。
+
 ## [0.4.3-beta.2] - 2026-10-04 ⚠️ Beta
 
 ### 修复
