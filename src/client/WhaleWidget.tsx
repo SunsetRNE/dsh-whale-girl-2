@@ -174,7 +174,8 @@ function normalizeConfig(o: unknown): MenuConfig {
     snapMargin: Number.isFinite(Number(any.snapMargin))
       ? Math.min(200, Math.max(0, Math.round(Number(any.snapMargin))))
       : 0,
-    snapInset: Number.isFinite(Number(any.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(any.snapInset)))) : 12
+    snapInset: Number.isFinite(Number(any.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(any.snapInset)))) : 12,
+    snapOnRelease: any.snapOnRelease !== false
   }
 }
 
@@ -1069,13 +1070,14 @@ export function WhaleWidget() {
     } catch {
       // ignore
     }
-    if (edgeDist > margin) {
+    // snapOnRelease=false：松手只做边界夹取，"拖到哪停哪"，不吸到侧边
+    if (!config.snapOnRelease || edgeDist > margin) {
       setPos({ x: px, y: py })
       return
     }
     const left = x + (WIDGET_W * sc) / 2 < vw / 2 ? ins : vw - WIDGET_W * sc - ins
     setPos({ x: Math.max(ins, left), y: Math.max(ins, Math.min(vh - WIDGET_H * sc - ins, y)) })
-  }, [config.snapMargin])
+  }, [config.snapMargin, config.snapOnRelease])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。
   //
@@ -1302,6 +1304,10 @@ export function WhaleWidget() {
     if (!middleModeRef.current && pressStartRef.current) {
       const s = pressStartRef.current
       if (Math.hypot(e.clientX - s.x, e.clientY - s.y) <= TAP_SLOP) return
+      // 刚越过死区：按「当前角色位置」重锚手指偏移，消除那 14px 的补跳。
+      // 不重锚时 nx = clientX - dx 会让角色一次性追上 14px —— 手感是「先拖不动、再突然跳」。
+      // 只重锚 dragRef：pressStartRef 还要留给抬手时的 moved 判定，不能动。
+      dragRef.current = { dx: e.clientX - posRef.current.x, dy: e.clientY - posRef.current.y }
     }
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {

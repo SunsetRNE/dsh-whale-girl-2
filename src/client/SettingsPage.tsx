@@ -149,6 +149,15 @@ export function SettingsPage(): React.ReactElement {
             </div>
           </div>
 
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={cfg.snapOnRelease !== false}
+              onChange={(e) => queue({ snapOnRelease: e.target.checked })}
+            />
+            <span>松手吸附到边缘（关掉 = 拖到哪停哪）</span>
+          </label>
+
           <div style={{ marginTop: 12, marginBottom: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>贴边留白</span>

@@ -144,6 +144,8 @@ export interface WidgetConfig {
   snapMargin: number
   /** 贴边留白（px）：角色与屏幕边缘之间至少留这么多 —— 用来让挂件/徽章/气泡不顶着屏幕边 */
   snapInset: number
+  /** 松手时是否吸附到最近侧边：关掉 = 拖到哪就停哪（仅越界时夹回屏内） */
+  snapOnRelease: boolean
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -191,7 +193,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   groundFriction: 0.95,
   deepSleep: true,
   snapMargin: 0,
-  snapInset: 12
+  snapInset: 12,
+  snapOnRelease: true
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -232,7 +235,9 @@ function normalizeConfig(raw: unknown): WidgetConfig {
       ? Math.min(200, Math.max(0, Math.round(Number(o.snapMargin))))
       : 0,
     // 0 是合法值（完全贴边），因此不能用 `|| 12` 兜底
-    snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(o.snapInset)))) : 12
+    snapInset: Number.isFinite(Number(o.snapInset)) ? Math.min(60, Math.max(0, Math.round(Number(o.snapInset)))) : 12,
+    // 松手吸附开关：默认开（保持原行为），关掉就是「拖到哪停哪」
+    snapOnRelease: o.snapOnRelease !== false
   }
 }
 
