@@ -249,7 +249,8 @@ export function WhaleWidget() {
   const wakePopTimerRef = useRef(0)
   const sleepTimerRef = useRef(0)
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
-  const pressStartRef = useRef<{ x: number; y: number } | null>(null)
+  // posX/posY = 按下瞬间的角色位置：判定为「点击」时用它把跟手造成的微小位移还原回去
+  const pressStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null)
   // 中键弹弓状态
   const middleModeRef = useRef(false)
   const slingOriginRef = useRef<{ x: number; y: number } | null>(null)
@@ -1253,7 +1254,7 @@ export function WhaleWidget() {
         return
       }
       dragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
-      pressStartRef.current = { x: e.clientX, y: e.clientY }
+      pressStartRef.current = { x: e.clientX, y: e.clientY, posX: posRef.current.x, posY: posRef.current.y }
       trackerRef.current.clear()
       // 0.4：绳摆（弹性绳挂鼠标）与重力是两个独立开关；都没开 = 0.3.12 直接跟手
       // 绳摆延迟激活：等 pointermove 位移超阈值再挂绳（点击不触发下坠）
@@ -1452,7 +1453,20 @@ export function WhaleWidget() {
 
       // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）；点击=戳她 → "><" 痛颜（10/4 加大触发面：撞墙之外多一条日常触发）
       if (!moved) {
-        reportEvent('click', { x: Math.round(posRef.current.x), y: Math.round(posRef.current.y), moved })
+        // 位置还原：手指按下时但凡有几像素滑动，跟手逻辑就已经把角色挪走了
+        // （moveTo 直写 transform 并更新 posRef），而抬手点若仍在 TAP_SLOP 内就判成「点击」。
+        // 不还原的话，连续点击会一次挪一点 —— 实测日志里每次点击位置稳定 +30px，
+        // 表现就是「点一下角色斜着往下跑」。
+        if (start !== null && (posRef.current.x !== start.posX || posRef.current.y !== start.posY)) {
+          posRef.current = { x: start.posX, y: start.posY }
+          setPos({ x: start.posX, y: start.posY })
+          moveTo(start.posX, start.posY)
+        }
+        reportEvent('click', {
+          x: Math.round(start?.posX ?? posRef.current.x),
+          y: Math.round(start?.posY ?? posRef.current.y),
+          moved
+        })
         showEyes()
         setPetted(true)
         setPetKey((k) => k + 1)
