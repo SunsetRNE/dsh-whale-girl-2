@@ -102,6 +102,8 @@ interface Props {
   config: MenuConfig
   onChange: (next: MenuConfig) => void
   onResetPosition: () => void
+  /** beta 专属：立刻哄睡（0.4.3 正式版移除） */
+  onSleep?: () => void
   onClose: () => void
   /** API 提供方列表（null = 尚未加载）。 */
   providers: ProviderRow[] | null
@@ -111,7 +113,7 @@ interface Props {
   switching: string | null
 }
 
-export function WidgetMenu({ x, y, config, onChange, onResetPosition, onClose, providers, onSwitchProvider, switching }: Props) {
+export function WidgetMenu({ x, y, config, onChange, onResetPosition, onSleep, onClose, providers, onSwitchProvider, switching }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -406,6 +408,8 @@ export function WidgetMenu({ x, y, config, onChange, onResetPosition, onClose, p
       </div>
       <div className="wg-menu-divider" />
       <div className="wg-menu-item" onClick={onResetPosition}>↺ 恢复默认位置</div>
+      {/* TODO 0.4.3 正式版：移除哄睡按钮（beta 试玩专属） */}
+      {onSleep && <div className="wg-menu-item" onClick={() => { onSleep(); onClose() }}>😴 立刻哄睡（beta）</div>}
     </div>
   )
 }

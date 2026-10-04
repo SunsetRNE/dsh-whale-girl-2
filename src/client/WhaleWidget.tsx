@@ -1294,9 +1294,10 @@ export function WhaleWidget() {
       soundRef.current?.release()
       reportEvent('sound', { kind: 'release' })
 
-      // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）
+      // 点击（非拖拽）：触发彩蛋/随机台词（仅当气泡模块开启）；点击=戳她 → "><" 痛颜（10/4 加大触发面：撞墙之外多一条日常触发）
       if (!moved) {
         reportEvent('click')
+        showEyes()
         setPetted(true)
         setPetKey((k) => k + 1)
         window.clearTimeout(petTimerRef.current)
@@ -1643,6 +1644,7 @@ export function WhaleWidget() {
           config={config}
           onChange={persistConfig}
           onResetPosition={resetPosition}
+          onSleep={() => setSleeping(true)}
           onClose={() => setMenu(null)}
           providers={providers}
           onSwitchProvider={handleSwitchProvider}
