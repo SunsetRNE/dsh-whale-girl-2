@@ -1466,7 +1466,12 @@ export function WhaleWidget() {
         return
       }
       const start = pressStartRef.current
-      const moved = start !== null && Math.hypot(e.clientX - start.x, e.clientY - start.y) > TAP_SLOP
+      // 是否算「拖动」：以「死区是否越过」为准。
+      // 旧写法只看抬手点与按下点的距离 —— 小幅拖动（<TAP_SLOP）会被判成点击，
+      // 然后走点击分支把位置**还原**回按下点，表现就是「拖了一下，松手弹回原处」。
+      const moved =
+        deadzonePassedRef.current ||
+        (start !== null && Math.hypot(e.clientX - start.x, e.clientY - start.y) > TAP_SLOP)
       // 0.4：松手速度优先取绳摆模拟的摆锤速度（真实摆动末速，比指针采样准确）
       const ropeV = ropeRef.current ? { vx: ropeRef.current.vx, vy: ropeRef.current.vy } : null
       stopRopeSim()
