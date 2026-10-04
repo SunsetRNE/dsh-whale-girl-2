@@ -607,7 +607,8 @@ export function WhaleWidget() {
                 infoVelRef.current = { x: n.x * 60, y: n.y * 60 }
               }
               // 对称：角色静止被面板撞到 → 角色进入甩抛（被撞飞，带面板动量）
-              if (!dragging && !flinging) {
+              // 中键弹弓蓄力中不参与：蓄力时角色本该被"按住"，被面板撞飞会让弹弓原地失联
+              if (!dragging && !flinging && !middleModeRef.current) {
                 const pvx = infoVelRef.current.x
                 const pvy = infoVelRef.current.y
                 if (Math.hypot(pvx, pvy) > 60) {
@@ -742,8 +743,8 @@ export function WhaleWidget() {
       if (infoElRef.current) {
         infoElRef.current.style.transform = `translate3d(${nx}px,${ny}px,0) scale(${config.linkScale ? config.widgetScale : config.infoScale})`
       }
-      // 拖拽面板撞到静止/吸附角色 → 角色获得动量（被撞飞）
-      if (!dragging && !flinging) {
+      // 拖拽面板撞到静止/吸附角色 → 角色获得动量（被撞飞）；中键弹弓蓄力中同样豁免
+      if (!dragging && !flinging && !middleModeRef.current) {
         const roleH = WIDGET_H * 0.78
         const roleCx = posRef.current.x + WIDGET_W / 2
         const roleCy = posRef.current.y + roleH / 2
