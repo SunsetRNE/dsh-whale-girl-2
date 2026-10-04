@@ -7,7 +7,7 @@ import { EasterEgg } from './EasterEgg'
 import { pickRandomIdleLine } from './quotes'
 import { SoundEngine } from './SoundEngine'
 import { FlingTracker, startFling } from './PhysicsFling'
-import { WHALE_GIRL_DATA_URL } from './whaleDataUrl'
+import { WHALE_BASE_DATA_URL, WHALE_SLEEP_DATA_URL, WHALE_PAIN_DATA_URL } from './whalePoseDataUrls'
 import { RUA_GIF_URL } from './ruaDataUrl'
 import { WidgetMenu, MenuConfig, DEFAULT_MENU_CONFIG, ProviderRow } from './WidgetMenu'
 
@@ -215,7 +215,8 @@ export function WhaleWidget() {
   const [petKey, setPetKey] = useState(0)
   const [state, setState] = useState<WhaleState>(EMPTY_STATE)
   const [bubble, setBubble] = useState<string | null>(null)
-  const [imgSrc] = useState<string>(WHALE_GIRL_DATA_URL)
+  // 0.4.4 三帧立绘：痛颜帧显示期（撞墙/撞面板/点击 650ms）；睡觉帧由 sleeping 状态直接切换
+  const [painOn, setPainOn] = useState(false)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [providers, setProviders] = useState<ProviderRow[] | null>(null)
   const [switching, setSwitching] = useState<string | null>(null)
@@ -227,7 +228,7 @@ export function WhaleWidget() {
   const [sleeping, setSleeping] = useState(false)
   const sleepingRef = useRef(false)
   // 0.4.3 "><" 痛颜眼睛：撞墙/撞面板时一闪（key 变化重放动画，0.3s 即消失）
-  const [eyesKey, setEyesKey] = useState(0)
+  // 0.4.4 痛颜帧计时器（sleeping 用 sleepingRef 直读，不占 state）
   const eyesTimerRef = useRef(0)
   // 0.4.3 拖尾：中央采样循环的状态（layer 容器 + 上一帧位置 + 采样欠账 + 存活计数）
   const trailLayerRef = useRef<HTMLDivElement | null>(null)
@@ -791,9 +792,13 @@ export function WhaleWidget() {
     [config.infoScale, config.linkScale, config.widgetScale]
   )
   const getObstacle = useCallback(() => __wgInfoGlobal, [])
-  // 0.4.3 "><" 眼睛暂撤（10/4 用户裁决：SVG 叠图坐标靠猜，等重画带表情立绘后下版本以图帧形式回归）
+  // 0.4.4 "><" 痛颜帧：撞墙/撞面板/点击时切换立绘 650ms（睡觉中不触发）
+  // ⚠️ 必须定义在 handleObstacleHit 等使用点之前——useCallback 依赖数组在渲染期求值，声明在后会 TDZ 崩溃
   const showEyes = useCallback(() => {
-    /* 占位保留：触发点（撞墙/撞面板/点击）已接线，立绘就绪后切回图帧切换 */
+    if (sleepingRef.current) return
+    setPainOn(true)
+    window.clearTimeout(eyesTimerRef.current)
+    eyesTimerRef.current = window.setTimeout(() => setPainOn(false), 650)
   }, [])
 
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
@@ -1545,7 +1550,7 @@ export function WhaleWidget() {
         {config.showWorkState && state.subagentRunning > 0 && (
           <div className="wg-subagent">分身×{state.subagentRunning}</div>
         )}
-        <img className="wg-img" src={imgSrc || '/dsh-whale-girl/whale-girl.png'} alt="鲸鱼娘" draggable={false} />
+        <img className="wg-img" src={sleeping ? WHALE_SLEEP_DATA_URL : painOn ? WHALE_PAIN_DATA_URL : WHALE_BASE_DATA_URL} alt="鲸鱼娘" draggable={false} />
         {sleeping && (
           <div className="wg-zzz">
             <span>Z</span>
