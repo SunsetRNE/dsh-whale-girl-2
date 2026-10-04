@@ -1052,8 +1052,10 @@ export function WhaleWidget() {
     // 自动档：只在真正贴近边缘时才吸过去。
     // 原公式 vw*0.18（手机约 68px）判定圈太大 —— 角色离边还有一大截就被吸走。
     // 改为 vw*0.09、下限 24px（手机约 34px），EDGE_SNAP_MARGIN 仍作桌面端上限。
-    const margin =
-      config.snapMargin > 0 ? config.snapMargin : Math.min(EDGE_SNAP_MARGIN, Math.max(24, Math.round(vw * 0.09)))
+    // 吸附判定圈 = 配置值，**0 就是「不吸附」**（不再有"自动档"）。
+    // 旧语义里 0 是"自动"（手机约 34px）：想关掉的人把滑块拉到 0，反而拿到最大圈 ——
+    // 这正是「无论怎么调都觉得大」的来源。
+    const margin = config.snapMargin
     // 取证：吸附会同时改写 x 与 y（斜向跳）。点击若意外走到这里，这条上报会落进宿主日志 ——
     // 用来分辨「点击触发了吸附」还是「另有位移源」。每次吸附一行，量很小。
     try {
@@ -1074,7 +1076,7 @@ export function WhaleWidget() {
       // ignore
     }
     // snapOnRelease=false：松手只做边界夹取，"拖到哪停哪"，不吸到侧边
-    if (!config.snapOnRelease || edgeDist > margin) {
+    if (!config.snapOnRelease || margin <= 0 || edgeDist > margin) {
       setPos({ x: px, y: py })
       return
     }
