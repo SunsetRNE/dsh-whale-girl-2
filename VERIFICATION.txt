@@ -1,0 +1,95 @@
+dsh-whale-girl 本地副本 —— 落盘修复后的实测记录
+生成时间：2026-10-03 18:47（本机 DSH 0.1.7-rc.2 / Node v24.19.0 / npm 11.17.0）
+
+============================================================
+一、单元测试（npx vitest run）—— 4 文件 21 用例全通过
+============================================================
+ ✓ tests/smoke.test.ts    (1 test)
+ ✓ tests/context.test.ts  (4 tests)
+ ✓ tests/turnCost.test.ts (8 tests)   <- 原 3 条 + 本轮新增 5 条
+ ✓ tests/balance.test.ts  (8 tests)
+ Test Files  4 passed (4)
+      Tests  21 passed (21)
+
+注：容器原先没有 localhost 映射（/etc/hosts 里 0 条），vitest 起不来并报
+    `getaddrinfo ENOTFOUND localhost`。补 `127.0.0.1 localhost` / `::1 localhost` 后才跑通。
+
+============================================================
+二、纯函数判据（Node 原生类型剥离直跑源文件）
+============================================================
+OK   estimateCost 600/400 拆分 = 0.0011
+OK   outputTokens 被真正使用（旧版忽略它）
+OK   estimateCostUnsplit 全按输入价 = 0.5
+OK   退化估算严格低于拆分估算
+OK   todayStr 按北京时间切天（20:00Z -> 次日）
+OK   todayStr 边界保持：00:00Z 仍是当天
+
+============================================================
+三、selectModel 注入面（真实文件读写的端到端测试，13/13）
+============================================================
+OK   合法切换返回 true
+OK   文件里 provider 已改 / model 已改
+OK   切换前留了 .bak 备份
+OK   注释与其它段落未被破坏
+OK   拒绝 换行注入（返回 false，文件未变）
+OK   拒绝 回车+新段（返回 false，文件未变）
+OK   拒绝 替换串 $&（返回 false，文件未变）
+OK   拒绝 替换串 $`（返回 false，文件未变）
+OK   拒绝 路径穿越（返回 false，文件未变）
+OK   拒绝 空字符串（返回 false，文件未变）
+OK   拒绝 超长(>64)（返回 false，文件未变）
+OK   拒绝 含冒号（返回 false，文件未变）
+
+============================================================
+四、diag 死代码（对 lib/index.js 构建产物做端到端复现）
+============================================================
+干净安装（DSH_HOME=/tmp/wg-apply）：
+  日志文件存在? true
+  内容: "[2026-10-03T18:46:43.678Z] apply-ok
+         [2026-10-03T18:46:43.682Z] refresh: no-credentials"
+  -> 修复前该文件永远不会被创建。
+
+轮转路径（预置 1.1MB 日志）：
+  已归档为 .old ? true
+  新日志大小: 87 字节
+
+============================================================
+五、构建与包形态
+============================================================
+node scripts/build.mjs -> [build] 声明产物归位：lib/index.ts -> lib/types/index.d.ts
+node --check lib/index.js  -> OK
+node --check lib/client.js -> OK
+package.json exports["."].types = ./lib/types/index.d.ts -> exists? true
+
+bash scripts/verify-local.sh -> 8/8 OK
+  host 入口 / client 入口 / bundle patch / 两个语法 / inject=[] / require 三件 / patch 行
+
+============================================================
+六、总账自检（13 项，修正注释误报后全通过）
+============================================================
+OK  P0-2 diag 不再被 statSync 掐死
+OK  P3-1 measure 详单已加 DEBUG 开关
+OK  P0-1 provider 有白名单
+OK  P0-1 原子写 + .bak 备份
+OK  P1-1 可执行代码里旧调用已消失、新调用在场
+OK  P1-2 兜底轮询知道桥接
+OK  P1-3 相邻整帧闸门已拆
+OK  P1-4 时区已统一
+OK  P2-1 声明产物已归位
+OK  P2-2 devDeps 有 react
+OK  P2-2b 平台专用包 @esbuild/win32-x64 已移出 devDeps
+OK  P2-3 workspace 键已修（onlyBuiltDependencies）
+OK  P2-4 inject 已收敛为 []
+
+注：本轮新发现一个平台阻塞 —— devDependencies 里硬编码 `@esbuild/win32-x64`，
+    在任何非 Windows 平台 `npm install` 会直接 EBADPLATFORM 失败（实测报
+    "notsup Valid os: win32 / Actual os: linux"）。移出后 `npm install --dry-run`
+    解析 99 个包无报错，随后实装 97 个包成功。
+
+============================================================
+七、未做（如实记录）
+============================================================
+- 未装机：profile 未改动，install-local.sh 未执行，挂件在真实 GUI 里是否显示仍未实测。
+- P2-5（余额探测 7N 并发）、P2-6（配置双真源）、P2-7（挂载节点回收）、
+  P3-2/P3-3/P3-4/P3-5/P3-6/P3-7 未动。
+- 未在 0.2.x 运行时上验证。

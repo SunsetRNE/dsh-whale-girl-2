@@ -1,0 +1,20 @@
+--- /tmp/whale/package.json	2026-10-03 18:15:38.413985513 +0000
++++ package.json	2026-10-03 18:23:45.545985327 +0000
+@@ -30,7 +30,6 @@
+     "client": {
+       "platform": "web",
+       "inject": [
+-        "@deepseek-ai/dsh-client-runtime",
+         "@deepseek-ai/dsh-client-locale",
+         "@deepseek-ai/dsh-client-ui-slots"
+       ]
+--- /tmp/whale/pnpm-workspace.yaml	2026-10-03 18:15:38.417985513 +0000
++++ pnpm-workspace.yaml	2026-10-03 18:23:45.545985327 +0000
+@@ -1,2 +1,5 @@
+-allowBuilds:
+-  esbuild: set this to true or false
++packages:
++  - .
++
++onlyBuiltDependencies:
++  - esbuild
