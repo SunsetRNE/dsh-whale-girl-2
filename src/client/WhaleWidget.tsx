@@ -319,11 +319,11 @@ export function WhaleWidget() {
     posRef.current = { x, y }
     const el = rootRef.current
     if (!el) return
-    // 必须与 JSX 里那份 transform 同构（包括按下时的 scaleY(0.9) 压扁），
-    // 否则直写会把「被按住」的视觉反馈抹掉。
-    el.style.transform =
-      `translate3d(${x}px,${y}px,0) scale(${scaleRef.current})` +
-      (pressedRef.current ? ' scaleY(0.9)' : '')
+    // 必须与 JSX 里那份 transform 同构 —— 但**不再包含 scaleY 压扁**：
+    // 按下反馈已改为 .wg-pressed 的滤镜类（见 styles.ts），几何完全不动。
+    // 这里若还留着 scaleY(0.9)，热路径直写会盖过 JSX 那份，
+    // 且 .wg-root 的 origin 在容器中心 —— 会把靠上摆放的立绘往中心（向下）拉。
+    el.style.transform = `translate3d(${x}px,${y}px,0) scale(${scaleRef.current})`
     // 翻转类按真实位置直接切。JSX 里那份用的是 state，热路径期间会滞后一帧，
     // 但下一次重渲染会按同步后的 state 落到同一个值，不会打架。
     el.classList.toggle('wg-flip', x + WIDGET_W / 2 < window.innerWidth / 2)
