@@ -264,6 +264,7 @@ export function WhaleWidget() {
   const roleVelRef = useRef({ x: 0, y: 0 })
   // 0.4 旋转表现：角色朝向用欠阻尼弹簧追赶目标角度（滞后+过冲=摆动更真实）
   const swingTargetRef = useRef(0)
+  const swingCurRef = useRef(0)
   const swingRotRef = useRef({ a: 0, v: 0 })
   const infoPosRef = useRef(infoPos)
   const infoElRef = useRef<HTMLDivElement>(null)
@@ -545,8 +546,13 @@ export function WhaleWidget() {
       roleVelRef.current = { x: rvx, y: rvy }
       // 旋转弹簧：欠阻尼追赶目标角度（绳摆角/飞行倾斜），松开后目标缓慢回正
       if (!ropeRef.current && !flinging) swingTargetRef.current *= Math.pow(0.4, dt)
+      // 撞墙瞬间速度反向 → 目标角 ±30 瞬间翻转，弹簧直接追会"抽搐"——目标角限速逼近（240°/s，全翻转约 130ms）
+      const rawTarget = swingTargetRef.current
+      const curTarget = swingCurRef.current
+      const smoothTarget = curTarget + Math.max(-240 * dt, Math.min(240 * dt, rawTarget - curTarget))
+      swingCurRef.current = smoothTarget
       const s = swingRotRef.current
-      const sAcc = (swingTargetRef.current - s.a) * 60 - s.v * 9
+      const sAcc = (smoothTarget - s.a) * 60 - s.v * 9
       s.v += sAcc * dt
       s.a += s.v * dt
       const swingImg = rootRef.current?.querySelector('.wg-img') as HTMLElement | null
