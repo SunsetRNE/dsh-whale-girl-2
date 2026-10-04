@@ -1040,8 +1040,11 @@ export function WhaleWidget() {
     // 贴边留白：角色与屏幕边保持 config.snapInset（默认 12px）。
     // 原来写死 8px —— 手机屏上等于"贴死"，挂件本体与贴边徽章的视觉元素会顶到屏幕边。
     const ins = insetRef.current
-    const px = Math.max(ins, Math.min(vw - WIDGET_W * sc - ins, x))
-    const py = Math.max(ins, Math.min(vh - WIDGET_H * sc - ins, y))
+    // 越界兜底用 **0 边距**：inset 只决定「吸附后的停靠位」，不该在非吸附时把角色往屏幕内推。
+    // 旧写法用 ins 夹取 —— 于是即便关了吸附，松手时角色仍被推离边缘 ins 像素，
+    // 看起来就是「关闭贴边吸附没用」（日志实测：margin=0 时仍有 edgeDist=-2 被夹回）。
+    const px = Math.max(0, Math.min(vw - WIDGET_W * sc, x))
+    const py = Math.max(0, Math.min(vh - WIDGET_H * sc, y))
     // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）。
     // 缩放必须一起算：拿裸尺寸算会让判定范围虚高 (1/scale - 1)，scale=0.65 时约 +54% ——
     // 角色离边还有一大截就被判成「已经在边上」，于是被吸过去（表现为手动一拖就往边缘靠）。
