@@ -776,6 +776,14 @@ export function WhaleWidget() {
     [config.infoScale, config.linkScale, config.widgetScale]
   )
   const getObstacle = useCallback(() => __wgInfoGlobal, [])
+  // 0.4.3 "><" 痛颜眼睛：key 自增重放弹入动画，320ms 后卸载（设计要求 0.3s 即消失）
+  // ⚠️ 必须定义在 handleObstacleHit 等使用点之前——useCallback 依赖数组在渲染期求值，声明在后会 TDZ 崩溃
+  const showEyes = useCallback(() => {
+    setEyesKey((k) => k + 1)
+    window.clearTimeout(eyesTimerRef.current)
+    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 320)
+  }, [])
+
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
     // 角色撞到面板：面板获得角色入射动量（被撞飞，速度 = 角色速度 * 0.8）
     showEyes()
@@ -864,13 +872,6 @@ export function WhaleWidget() {
     setBounce(true)
     window.clearTimeout(bounceTimerRef.current)
     bounceTimerRef.current = window.setTimeout(() => setBounce(false), 300)
-  }, [])
-
-  // 0.4.3 "><" 痛颜眼睛：key 自增重放弹入动画，320ms 后卸载（设计要求 0.3s 即消失）
-  const showEyes = useCallback(() => {
-    setEyesKey((k) => k + 1)
-    window.clearTimeout(eyesTimerRef.current)
-    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 320)
   }, [])
 
   // 0.4.3 拖尾：中央 rAF 采样循环——差分 posRef 得到速度与移动距离，高速时每前进 16px 洒一颗光点

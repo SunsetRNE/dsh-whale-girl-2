@@ -1,5 +1,10 @@
 # 更新日志
 
+## [0.4.3-beta.4] - 2026-10-04 ⚠️ Beta
+
+### 修复
+- **TDZ 崩溃**：`showEyes` 定义在 `handleObstacleHit` 的依赖数组之后，渲染期求值触发 `Cannot access 'showEyes' before initialization` → React 整树渲染失败、挂载点为空（挂件无声消失的最后一环）。已把定义移到使用点之前。beta.1~3 全部中招，vitest 只测服务层未拦截。
+
 ## [0.4.3-beta.3] - 2026-10-04 ⚠️ Beta
 
 ### 修复
