@@ -35,6 +35,8 @@ export interface MenuConfig {
   infoScale: number
   /** 锁定角色与面板大小同步（面板大小=挂件大小） */
   linkScale: boolean
+  /** 边缘吸附范围（px）：0 = 按视口自适应，>0 = 手动指定 */
+  snapMargin: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -86,6 +88,7 @@ export const DEFAULT_MENU_CONFIG: MenuConfig = {
   widgetScale: 1,
   infoScale: 1,
   linkScale: false,
+  snapMargin: 0,
   gravityMode: false,
   ropeMode: false,
   ropeK: 80,

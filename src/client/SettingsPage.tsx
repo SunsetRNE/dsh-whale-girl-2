@@ -121,6 +121,34 @@ export function SettingsPage(): React.ReactElement {
             <span>锁定同步：挂件与面板一起缩放</span>
           </label>
 
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={cfg.showInfo === true}
+              onChange={(e) => queue({ showInfo: e.target.checked })}
+            />
+            <span>信息面板（CPU / 内存 / 时间）</span>
+          </label>
+
+          <div style={{ marginTop: 12, marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>边缘吸附范围</span>
+              <code>{num('snapMargin', 0) === 0 ? '自动' : num('snapMargin', 0) + 'px'}</code>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={200}
+              step={10}
+              value={num('snapMargin', 0)}
+              onChange={(e) => queue({ snapMargin: Number(e.target.value) })}
+              style={{ width: '100%' }}
+            />
+            <div style={{ opacity: 0.55, fontSize: 12 }}>
+              0 = 按屏幕宽度自动（窄屏自动收窄，更容易吸附到边上）；数值越大，只有越贴近边缘才吸附
+            </div>
+          </div>
+
           <p style={{ opacity: 0.6, margin: '12px 0 0' }}>
             {saving ? '保存中…' : '已保存'} · 挂件在挂载时读取配置，刷新页面即生效。
           </p>

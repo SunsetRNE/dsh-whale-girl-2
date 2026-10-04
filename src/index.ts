@@ -140,6 +140,8 @@ export interface WidgetConfig {
   infoScale: number
   /** 锁定角色与面板大小同步（面板大小=挂件大小） */
   linkScale: boolean
+  /** 边缘吸附范围（px）：0 = 按视口自动（窄屏自动收窄），>0 = 手动指定 */
+  snapMargin: number
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -185,7 +187,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   ropeMax: 150,
   bounceE: 1,
   groundFriction: 0.95,
-  deepSleep: true
+  deepSleep: true,
+  snapMargin: 0
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -204,7 +207,10 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     lowBalance: Number.isFinite(Number(o.lowBalance)) ? Math.max(0, Number(o.lowBalance)) : 10,
     showWorkState: o.showWorkState !== false,
     realtimeBalance: o.realtimeBalance === true,
-    showInfo: o.showInfo !== false,
+    // 与 DEFAULT_CONFIG 对齐：信息面板默认关闭，只有显式 true 才开。
+    // 旧写法 `!== false` 是「缺省即开」—— 任何一次只带部分字段的 POST 都会把这个默认关掉的面板
+    // 自己打开（实测：只提交尺寸三字段就让 CPU/内存面板凭空冒出来）。上游 0.4.2 起就有这处不一致。
+    showInfo: o.showInfo === true,
     followThreshold: Number.isFinite(Number(o.followThreshold)) ? Math.min(360, Math.max(60, Math.round(Number(o.followThreshold)))) : 180,
     infoFrost: Number.isFinite(Number(o.infoFrost)) ? Math.min(16, Math.max(0, Math.round(Number(o.infoFrost)))) : 4,
     pauseOnThinking: o.pauseOnThinking !== false,
@@ -218,7 +224,10 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     ropeMax: Number.isFinite(Number(o.ropeMax)) ? Math.min(400, Math.max(40, Number(o.ropeMax))) : 150,
     bounceE: Number.isFinite(Number(o.bounceE)) ? Math.min(1, Math.max(0.1, Number(o.bounceE))) : 1,
     groundFriction: Number.isFinite(Number(o.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(o.groundFriction))) : 0.95,
-    deepSleep: o.deepSleep !== false
+    deepSleep: o.deepSleep !== false,
+    snapMargin: Number.isFinite(Number(o.snapMargin))
+      ? Math.min(200, Math.max(0, Math.round(Number(o.snapMargin))))
+      : 0
   }
 }
 

@@ -153,7 +153,7 @@ function normalizeConfig(o: unknown): MenuConfig {
     lowBalance: Number.isFinite(Number(any.lowBalance)) ? Math.max(0, Number(any.lowBalance)) : 10,
     showWorkState: any.showWorkState !== false,
     realtimeBalance: any.realtimeBalance === true,
-    showInfo: any.showInfo !== false,
+    showInfo: any.showInfo === true,
     followThreshold: Number.isFinite(Number(any.followThreshold)) ? Math.min(360, Math.max(60, Math.round(Number(any.followThreshold)))) : 180,
     infoFrost: Number.isFinite(Number(any.infoFrost)) ? Math.min(16, Math.max(0, Math.round(Number(any.infoFrost)))) : 4,
     pauseOnThinking: any.pauseOnThinking !== false,
@@ -167,7 +167,10 @@ function normalizeConfig(o: unknown): MenuConfig {
     ropeMax: Number.isFinite(Number(any.ropeMax)) ? Math.min(400, Math.max(40, Number(any.ropeMax))) : 150,
     bounceE: Number.isFinite(Number(any.bounceE)) ? Math.min(1, Math.max(0.1, Number(any.bounceE))) : 1,
     groundFriction: Number.isFinite(Number(any.groundFriction)) ? Math.min(0.99, Math.max(0.8, Number(any.groundFriction))) : 0.95,
-    deepSleep: any.deepSleep !== false
+    deepSleep: any.deepSleep !== false,
+    snapMargin: Number.isFinite(Number(any.snapMargin))
+      ? Math.min(200, Math.max(0, Math.round(Number(any.snapMargin))))
+      : 0
   }
 }
 
@@ -1023,13 +1026,18 @@ export function WhaleWidget() {
     const py = Math.max(8, Math.min(vh - WIDGET_H - 8, y))
     // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）
     const edgeDist = Math.min(x, vw - (x + WIDGET_W))
-    if (edgeDist > EDGE_SNAP_MARGIN) {
+    // 吸附范围：snapMargin > 0 时用手动值，否则按视口自动收窄。
+    // 固定 120px 是桌面取值 —— 手机竖屏宽约 380px 时它盖住屏幕中央近三分之一，
+    // 角色落在中间就判定「不吸附」，表现就是挂件甩不到边上。
+    const margin =
+      config.snapMargin > 0 ? config.snapMargin : Math.min(EDGE_SNAP_MARGIN, Math.max(48, Math.round(vw * 0.18)))
+    if (edgeDist > margin) {
       setPos({ x: px, y: py })
       return
     }
     const left = x + WIDGET_W / 2 < vw / 2 ? 8 : vw - WIDGET_W - 8
     setPos({ x: Math.max(8, left), y: Math.max(8, Math.min(vh - WIDGET_H - 8, y)) })
-  }, [])
+  }, [config.snapMargin])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。
   //
