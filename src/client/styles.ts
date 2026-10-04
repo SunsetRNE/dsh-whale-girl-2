@@ -434,26 +434,26 @@ export const WIDGET_CSS = `
 /* ── 0.4.3 "><" 眼睛：撞墙/撞面板时痛颜一闪（独立图层，0.3s 即消失） ── */
 .wg-eyes {
   position: absolute;
-  top: 16%;
+  top: 40%;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 30px;
+  gap: 26px;
   z-index: 10002;
   pointer-events: none;
-  animation: wg-eyes-pop 300ms ease-out forwards;
+  animation: wg-eyes-pop 620ms ease-out forwards;
 }
 .wg-eyes svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.8));
 }
 @keyframes wg-eyes-pop {
   0% { transform: scale(0.5); opacity: 0; }
-  30% { transform: scale(1.15); opacity: 1; }
-  70% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(0.92); opacity: 0; }
+  12% { transform: scale(1.15); opacity: 1; }
+  75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0; }
 }
 /* ── 0.4.3 拖尾：高速运动时按距离采样洒下光点（层级在角色下方） ── */
 .wg-trail-layer {

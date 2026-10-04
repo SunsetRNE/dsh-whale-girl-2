@@ -233,6 +233,10 @@ export function WhaleWidget() {
   const trailLayerRef = useRef<HTMLDivElement | null>(null)
   const trailLastRef = useRef<{ x: number; y: number; acc: number } | null>(null)
   const trailCountRef = useRef(0)
+  // 任意速度撞墙闪 "><"：中央循环里做贴墙检测（覆盖甩抛/绳摆/拖拽全运动源），带冷却防刷屏
+  const eyesCoolRef = useRef(0)
+  const cfgRef = useRef(config)
+  useEffect(() => { cfgRef.current = config }, [config])
   const sleepTimerRef = useRef(0)
   const dragRef = useRef<{ dx: number; dy: number } | null>(null)
   const pressStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -781,7 +785,7 @@ export function WhaleWidget() {
   const showEyes = useCallback(() => {
     setEyesKey((k) => k + 1)
     window.clearTimeout(eyesTimerRef.current)
-    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 320)
+    eyesTimerRef.current = window.setTimeout(() => setEyesKey(0), 650)
   }, [])
 
   const handleObstacleHit = useCallback((invx: number, invy: number) => {
@@ -891,6 +895,21 @@ export function WhaleWidget() {
         if (lt) {
           const dist = Math.hypot(p.x - lt.x, p.y - lt.y)
           const speed = dist / dt
+          // 任意速度贴墙 → "><"（低速蹭墙也触发，高速撞击靠 650ms 时长看清）
+          if (speed > 80 && now > eyesCoolRef.current) {
+            const sc = cfgRef.current.widgetScale || 1
+            const vl = p.x + ((WIDGET_W * (1 - sc)) / 2)
+            const vt = p.y + ((WIDGET_H * (1 - sc)) / 2)
+            const nearWall =
+              vl <= 12 ||
+              vt <= 12 ||
+              vl + WIDGET_W * sc >= window.innerWidth - 12 ||
+              vt + WIDGET_H * sc >= window.innerHeight - 12
+            if (nearWall) {
+              showEyes()
+              eyesCoolRef.current = now + 700
+            }
+          }
           if (speed > 250) {
             lt.acc += dist
             while (lt.acc >= 16 && trailCountRef.current < 36) {
@@ -1129,7 +1148,8 @@ export function WhaleWidget() {
   )
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    markActive()
+    // 只有拖拽中的移动算交互——悬停/划过不算（否则哄睡后鼠标一动就被"吵醒"），唤醒只认 pointerdown
+    if (dragRef.current) markActive()
     if (!dragRef.current) return
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {
