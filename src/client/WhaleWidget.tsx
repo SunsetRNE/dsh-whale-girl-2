@@ -1285,6 +1285,14 @@ export function WhaleWidget() {
     // 意图是「哄睡后鼠标划过不吵醒」，但拖拽中依旧是每帧重建定时器 —— 正是本行要消掉的开销。
     // 唤醒只认 pointerdown、悬停与划过一律不算，上游那条诉求已被这里覆盖。
     if (!dragRef.current) return
+    // 点击死区：位移没超过 TAP_SLOP 之前，一律不动角色。
+    // 原因：手指按下时总带几像素抖动，若立刻跟手，角色会先被挪走；抬手时按 TAP_SLOP 判成点击、
+    // 再把位置还原 —— 一挪一还原就是肉眼看到的「闪烁（往下跑又弹回来）」。
+    // 真拖动只是多了 14px 的起手死区，与原生拖拽行为一致。
+    if (!middleModeRef.current && pressStartRef.current) {
+      const s = pressStartRef.current
+      if (Math.hypot(e.clientX - s.x, e.clientY - s.y) <= TAP_SLOP) return
+    }
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {
       const nx = Math.max(0, Math.min(window.innerWidth - WIDGET_W * (scaleRef.current || 1), e.clientX - dragRef.current.dx))
