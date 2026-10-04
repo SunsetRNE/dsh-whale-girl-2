@@ -183,7 +183,11 @@ function normalizeConfig(o: unknown): MenuConfig {
     // 边缘保底留白：关掉贴边吸附后，越界夹取仍保留的最小距离（0 = 允许完全贴边）。
     // 与 snapInset 分开：snapInset 管「吸附后停在哪」，edgeGuard 管「能不能顶死」。
     edgeGuard: Number.isFinite(Number(any.edgeGuard)) ? Math.min(60, Math.max(0, Number(any.edgeGuard))) : 6,
-    snapOnRelease: any.snapOnRelease !== false
+    snapOnRelease: any.snapOnRelease !== false,
+    // 松手甩抛（惯性滑行）：默认关。旧行为是松手后按最后 120ms 的速度继续飞，
+    // 摩擦只有 0.985/帧 → 800px/s 的轻甩能滑近千 px，最后钉在右下角，
+    // 与「关掉贴边=拖到哪停哪」的直觉完全相反（真机反馈：一松手就往右下角掉）。
+    flingOnRelease: any.flingOnRelease === true
   }
 }
 
@@ -749,6 +753,7 @@ export function WhaleWidget() {
                   width: WIDGET_W * ws,
                   height: WIDGET_H * ws,
                   bounceE: config.bounceE,
+                  padding: config.edgeGuard,
                   gravity: config.gravityMode ? 2400 : undefined,
                   groundFriction: config.groundFriction,
                   getObstacle,
@@ -890,6 +895,7 @@ export function WhaleWidget() {
               width: WIDGET_W * config.widgetScale,
               height: WIDGET_H * config.widgetScale,
               bounceE: config.bounceE,
+              padding: config.edgeGuard,
               gravity: config.gravityMode ? 2400 : undefined,
               groundFriction: config.groundFriction,
               getObstacle,
@@ -1475,6 +1481,7 @@ export function WhaleWidget() {
               width: WIDGET_W * config.widgetScale,
               height: WIDGET_H * config.widgetScale,
               bounceE: config.bounceE,
+              padding: config.edgeGuard,
               gravity: config.gravityMode ? 2400 : undefined,
               groundFriction: config.groundFriction,
               getObstacle,
@@ -1509,6 +1516,7 @@ export function WhaleWidget() {
                 width: WIDGET_W * config.widgetScale,
                 height: WIDGET_H * config.widgetScale,
                 bounceE: config.bounceE,
+                padding: config.edgeGuard,
                 gravity: 2400,
                 groundFriction: config.groundFriction,
                 getObstacle,
@@ -1582,7 +1590,8 @@ export function WhaleWidget() {
           const r = eggRef.current.onPress()
           setBubble(r.kind === 'quote' ? r.text : pickRandomIdleLine())
         }
-      } else if (vel && Math.hypot(vel.vx, vel.vy) >= FLING_SPEED) {
+      } else if (config.flingOnRelease && vel && Math.hypot(vel.vx, vel.vy) >= FLING_SPEED) {
+        // 甩抛默认关闭：开了才按松手速度继续滑行（见 normalizeConfig 里的说明）
         reportEvent('fling', { vx: vel.vx, vy: vel.vy })
         // 快速甩抛：进入弹跳模式
         const el = rootRef.current
@@ -1598,6 +1607,7 @@ export function WhaleWidget() {
             width: WIDGET_W * (scaleRef.current || 1),
             height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
+            padding: config.edgeGuard,
             gravity: config.gravityMode ? 2400 : undefined,
             groundFriction: config.groundFriction,
             getObstacle,
@@ -1641,6 +1651,7 @@ export function WhaleWidget() {
             width: WIDGET_W * (scaleRef.current || 1),
             height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
+            padding: config.edgeGuard,
             gravity: 2400,
             groundFriction: config.groundFriction,
             getObstacle,
@@ -1678,6 +1689,7 @@ export function WhaleWidget() {
             width: WIDGET_W * (scaleRef.current || 1),
             height: WIDGET_H * (scaleRef.current || 1),
             bounceE: config.bounceE,
+            padding: config.edgeGuard,
             gravity: 2400,
             groundFriction: config.groundFriction,
             getObstacle,
@@ -1737,6 +1749,7 @@ export function WhaleWidget() {
           width: WIDGET_W * (scaleRef.current || 1),
           height: WIDGET_H * (scaleRef.current || 1),
           bounceE: config.bounceE,
+          padding: config.edgeGuard,
           gravity: config.gravityMode ? 2400 : undefined,
           groundFriction: config.groundFriction,
           getObstacle,

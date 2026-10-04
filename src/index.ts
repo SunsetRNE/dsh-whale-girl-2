@@ -148,6 +148,8 @@ export interface WidgetConfig {
   snapOnRelease: boolean
   /** 边缘保底留白（dp）：关掉吸附后越界夹取仍保留的最小距离（0 = 允许完全贴边） */
   edgeGuard: number
+  /** 松手甩抛（惯性滑行）：false = 松手就地停住（默认关） */
+  flingOnRelease: boolean
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -197,7 +199,8 @@ const DEFAULT_CONFIG: WidgetConfig = {
   snapMargin: 0,
   snapInset: 12,
   snapOnRelease: true,
-  edgeGuard: 6
+  edgeGuard: 6,
+  flingOnRelease: false
 }
 
 function normalizeConfig(raw: unknown): WidgetConfig {
@@ -244,7 +247,9 @@ function normalizeConfig(raw: unknown): WidgetConfig {
     // 边缘保底留白：关掉贴边吸附后越界夹取仍保留的最小距离（0 = 允许完全贴边）
     edgeGuard: Number.isFinite(Number(o.edgeGuard)) ? Math.min(60, Math.max(0, Number(o.edgeGuard))) : 6,
     // 松手吸附开关：默认开（保持原行为），关掉就是「拖到哪停哪」
-    snapOnRelease: o.snapOnRelease !== false
+    snapOnRelease: o.snapOnRelease !== false,
+    // 松手甩抛：默认关 —— 旧行为是松手后按末速继续滑（摩擦 0.985/帧，800px/s 的轻甩可滑近千 px）钉在角落
+    flingOnRelease: o.flingOnRelease === true
   }
 }
 

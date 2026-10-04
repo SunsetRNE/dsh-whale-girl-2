@@ -61,11 +61,34 @@ export interface FlingOptions {
   groundFriction?: number
   /** 重力加速度（px/s²）。设置后进入重力模式：自然下落、软着陆（反弹衰减、落地摩擦滑行）。不设=悬浮模式。 */
   gravity?: number
+  /** 边缘内缩（px）：甩抛也遵守贴边保底留白，别让角色甩完顶死在屏幕边上。默认 8。 */
+  padding?: number
 }
 
 const STOP_SPEED = 34
 const FRICTION_PER_FRAME = 0.985
 const MAX_DT = 0.05
+
+/**
+ * 甩抛的活动边界（纯函数，便于单测）：`padding` 是四边内缩量。
+ * 抽出来是因为 WhaleWidget 里原来写死的 8px 与 snapInset/edgeGuard 各说各话 ——
+ * 甩抛完之后角色停在离边 8px 的地方，看着和「贴边留白」的设置对不上。
+ */
+export function flingBounds(
+  width: number,
+  height: number,
+  padding: number,
+  vw: number,
+  vh: number
+): { left: number; top: number; right: number; bottom: number } {
+  const p = Number.isFinite(padding) && padding > 0 ? padding : 8
+  return {
+    left: p,
+    top: p,
+    right: Math.max(p, vw - width - p),
+    bottom: Math.max(p, vh - height - p)
+  }
+}
 
 /** 启动弹跳循环；返回句柄，可随时 cancel（例如用户重新按下）。 */
 export function startFling(opts: FlingOptions): { cancel: () => void } {
@@ -80,12 +103,8 @@ export function startFling(opts: FlingOptions): { cancel: () => void } {
   let last = performance.now()
   let cancelled = false
 
-  const bounds = () => ({
-    left: 8,
-    top: 8,
-    right: Math.max(8, window.innerWidth - opts.width - 8),
-    bottom: Math.max(8, window.innerHeight - opts.height - 8)
-  })
+  const bounds = () =>
+    flingBounds(opts.width, opts.height, opts.padding ?? 8, window.innerWidth, window.innerHeight)
 
   const step = (now: number) => {
     if (cancelled) return

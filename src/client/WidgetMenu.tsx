@@ -43,6 +43,8 @@ export interface MenuConfig {
   edgeGuard: number
   /** 松手时是否吸附到最近侧边：false = 拖到哪停哪 */
   snapOnRelease: boolean
+  /** 松手甩抛（惯性滑行）：false = 松手就地停住（默认关，旧行为是继续滑到角落） */
+  flingOnRelease: boolean
   /** 绳摆模式：拖拽时角色以弹性绳挂在鼠标上 */
   ropeMode: boolean
   /** 重力模式：松手落地（关闭=悬浮归位） */
@@ -98,6 +100,7 @@ export const DEFAULT_MENU_CONFIG: MenuConfig = {
   snapInset: 12,
   snapOnRelease: true,
   edgeGuard: 6,
+  flingOnRelease: false,
   gravityMode: false,
   ropeMode: false,
   ropeK: 80,

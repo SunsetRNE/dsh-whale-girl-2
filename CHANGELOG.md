@@ -3,6 +3,22 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.4.7+mod.4] - 2026-10-04 · 松手不再甩到右下角
+
+### 问题（真机反馈）
+- 手指拖动松手后挂件总往右下角掉：松手走的是**甩抛惯性**（`FLING_SPEED=800` px/s 以上即触发），而摩擦只有 `0.985/帧`
+- 算一下滑行距离：`v0=800` 时从 800 衰减到停止阈值 34 需约 2.2 s，位移 ≈ (800−34)/(60×0.015) ≈ **850 px** —— 手机屏才 360 CSS px 宽，一甩必然钉到角落
+- 与「关掉贴边 = 拖到哪停哪」的直觉正好相反
+
+### 修复
+- 新增 `flingOnRelease`（**默认 false = 松手就地停住**；打开才恢复旧甩抛）：拨杆在设置页与「松手吸附」并列；宿主 schema / `DEFAULT_CONFIG` / 客户端 `MenuConfig` / `DEFAULT_MENU_CONFIG` / `normalizeConfig` 五处同步
+- `PhysicsFling` 新增 `padding` 选项与纯函数 `flingBounds()`：甩抛的四边内缩改用 `edgeGuard`，不再写死 8px（旧实现甩抛停靠位与「贴边留白」设置各说各话）
+- 8 处 `startFling` 调用统一带上 `padding: config.edgeGuard`
+- 单测 +3（`tests/flingBounds.test.ts`）；全套 **35 条通过**
+
+### 不受影响的甩抛
+- 中键弹弓（明确动作）、重力模式落地/滑行、绳摆释放仍走各自物理 —— `flingOnRelease` 只管「手指拖拽松手」这一条路径
+
 ## [0.4.6+mod.3] - 2026-10-04 · 边缘保底留白 edgeGuard
 
 ### 问题（真机截图实测）

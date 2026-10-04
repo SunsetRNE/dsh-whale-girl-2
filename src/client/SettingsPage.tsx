@@ -191,6 +191,15 @@ export function SettingsPage(): React.ReactElement {
             <span>松手吸附到边缘（关掉 = 拖到哪停哪）</span>
           </label>
 
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <input
+              type="checkbox"
+              checked={cfg.flingOnRelease === true}
+              onChange={(e) => queue({ flingOnRelease: e.target.checked })}
+            />
+            <span>松手甩抛（惯性滑行）—— 关掉 = 松手就地停住（默认关）</span>
+          </label>
+
           <div style={{ marginTop: 12, marginBottom: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>贴边留白</span>
