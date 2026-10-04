@@ -1627,12 +1627,15 @@ export function WhaleWidget() {
       <div className="wg-trail-layer" ref={trailLayerRef} />
       <div
         ref={rootRef}
-        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${sleeping ? ' wg-sleep' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
+        className={`wg-root${dragging ? ' wg-dragging' : ''}${flinging ? ' wg-flinging' : ''}${bounce ? ' wg-bounce' : ''}${bounceAxis === 'x' ? ' wg-squash-x' : ''}${bounceAxis === 'y' ? ' wg-squash-y' : ''}${petted ? ' wg-pet' : ''}${pressed ? ' wg-pressed' : ''}${config.ecoMode && ecoIdle ? ' wg-eco' : ''}${config.gravityMode ? ' wg-gravity' : ''}${sleeping ? ' wg-sleep' : ''}${pos.x + WIDGET_W / 2 < window.innerWidth / 2 ? ' wg-flip' : ''}`}
         style={
           {
             left: 0,
             top: 0,
-            transform: `translate3d(${pos.x}px,${pos.y}px,0) scale(${config.widgetScale})${pressed ? ' scaleY(0.9)' : ''}`,
+            // 按下不再用 scaleY 压扁：.wg-root 是 170×170、transform-origin 在容器中心，
+            // 压扁会把靠上摆放的立绘往中心（即向下）拉 —— 点一下就"往下跑"。
+            // 改为 .wg-pressed 的滤镜反馈，几何完全不动。
+            transform: `translate3d(${pos.x}px,${pos.y}px,0) scale(${config.widgetScale})`,
             '--wg-frost': config.frost,
             '--wg-panel-alpha': config.panelOpacity
           } as React.CSSProperties

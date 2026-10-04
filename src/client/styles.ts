@@ -272,6 +272,11 @@ export const WIDGET_CSS = `
 .wg-pet .wg-img {
   filter: drop-shadow(0 7px 15px rgba(30, 50, 120, 0.3)) brightness(1.07) saturate(1.05);
 }
+/* 按下反馈：同上走滤镜不走 transform —— .wg-root 的 origin 在容器中心，
+   压扁会把靠上摆放的立绘往中心（向下）拉，点一下就有"往下跑"的观感。 */
+.wg-pressed .wg-img {
+  filter: drop-shadow(0 2px 6px rgba(30, 50, 120, 0.22)) brightness(0.97);
+}
 @keyframes wg-rua-pat {
   0% { transform: translateX(-50%) translateY(0); }
   30% { transform: translateX(-50%) translateY(10px); }
