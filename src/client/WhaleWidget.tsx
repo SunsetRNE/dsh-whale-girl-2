@@ -1022,8 +1022,11 @@ export function WhaleWidget() {
   const snap = useCallback((x: number, y: number) => {
     const vw = window.innerWidth
     const vh = window.innerHeight
-    const px = Math.max(8, Math.min(vw - WIDGET_W - 8, x))
-    const py = Math.max(8, Math.min(vh - WIDGET_H - 8, y))
+    // 缩放感知：角色视觉尺寸是 WIDGET_W×scale，边界必须同乘 —— 否则缩小后会停在
+    // 离边 (1-scale)×WIDGET_W 的位置（scale=0.65 时右侧空出约 60px，表现为「到不了屏幕边缘」）。
+    const sc = scaleRef.current || 1
+    const px = Math.max(8, Math.min(vw - WIDGET_W * sc - 8, x))
+    const py = Math.max(8, Math.min(vh - WIDGET_H * sc - 8, y))
     // 用角色窗口边缘距最近水平边判断（角色贴边才吸附，不因角色宽而误判）
     const edgeDist = Math.min(x, vw - (x + WIDGET_W))
     // 吸附范围：snapMargin > 0 时用手动值，否则按视口自动收窄。
@@ -1035,8 +1038,8 @@ export function WhaleWidget() {
       setPos({ x: px, y: py })
       return
     }
-    const left = x + WIDGET_W / 2 < vw / 2 ? 8 : vw - WIDGET_W - 8
-    setPos({ x: Math.max(8, left), y: Math.max(8, Math.min(vh - WIDGET_H - 8, y)) })
+    const left = x + (WIDGET_W * sc) / 2 < vw / 2 ? 8 : vw - WIDGET_W * sc - 8
+    setPos({ x: Math.max(8, left), y: Math.max(8, Math.min(vh - WIDGET_H * sc - 8, y)) })
   }, [config.snapMargin])
 
   // 交互诊断上报：通过 postMessage 发给页面顶层 bridge，由 bridge 用带认证的 fetch 上报宿主写日志。
@@ -1148,8 +1151,8 @@ export function WhaleWidget() {
       const ropeDeg = Math.atan2(cx - rope.ax, cy - rope.ay) * (180 / Math.PI)
       swingTargetRef.current = Math.max(-40, Math.min(40, ropeDeg))
       // 视口 clamp（按中心）
-      cx = Math.max(WIDGET_W / 2, Math.min(window.innerWidth - WIDGET_W / 2, cx))
-      cy = Math.max(WIDGET_H / 2, Math.min(window.innerHeight - WIDGET_H / 2, cy))
+      cx = Math.max((WIDGET_W * (scaleRef.current || 1)) / 2, Math.min(window.innerWidth - (WIDGET_W * (scaleRef.current || 1)) / 2, cx))
+      cy = Math.max((WIDGET_H * (scaleRef.current || 1)) / 2, Math.min(window.innerHeight - (WIDGET_H * (scaleRef.current || 1)) / 2, cy))
       posRef.current = { x: cx - WIDGET_W / 2, y: cy - WIDGET_H / 2 }
       setPos(posRef.current)
       ropeRafRef.current = requestAnimationFrame(step)
@@ -1259,8 +1262,8 @@ export function WhaleWidget() {
     if (!dragRef.current) return
     // 中键弹弓：挂件跟手，更新连接线（原位置中心 → 当前位置中心）
     if (middleModeRef.current) {
-      const nx = Math.max(0, Math.min(window.innerWidth - WIDGET_W, e.clientX - dragRef.current.dx))
-      const ny = Math.max(0, Math.min(window.innerHeight - WIDGET_H, e.clientY - dragRef.current.dy))
+      const nx = Math.max(0, Math.min(window.innerWidth - WIDGET_W * (scaleRef.current || 1), e.clientX - dragRef.current.dx))
+      const ny = Math.max(0, Math.min(window.innerHeight - WIDGET_H * (scaleRef.current || 1), e.clientY - dragRef.current.dy))
       moveTo(nx, ny)   // 直写 transform，不再每帧 setPos
       const o = slingOriginRef.current
       if (o) {
@@ -1284,8 +1287,8 @@ export function WhaleWidget() {
       rope.ay = e.clientY
       return
     }
-    let nx = Math.max(0, Math.min(window.innerWidth - WIDGET_W, e.clientX - dragRef.current.dx))
-    let ny = Math.max(0, Math.min(window.innerHeight - WIDGET_H, e.clientY - dragRef.current.dy))
+    let nx = Math.max(0, Math.min(window.innerWidth - WIDGET_W * (scaleRef.current || 1), e.clientX - dragRef.current.dx))
+    let ny = Math.max(0, Math.min(window.innerHeight - WIDGET_H * (scaleRef.current || 1), e.clientY - dragRef.current.dy))
     // 拖拽角色撞到信息面板：角色始终跟随鼠标（不挡回），面板被角色有力推开让位
     const ob = __wgInfoGlobal
     if (ob && nx < ob.x + ob.w && nx + WIDGET_W > ob.x && ny < ob.y + ob.h && ny + WIDGET_H > ob.y) {

@@ -53,7 +53,16 @@ export function ContextBar({
   const color = p < 60 ? '#4ade80' : p < 80 ? '#fbbf24' : '#f87171'
   const balLow = balance !== null && balance < 10
   return (
-    <div className="wg-context" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}>
+    <div
+      className="wg-context"
+      onClick={(e) => {
+        e.stopPropagation()
+        setOpen(!open)
+      }}
+      // 阻断 pointerdown 冒泡到挂件根节点：根节点在 pointerdown 里 setPointerCapture 启动拖拽判定，
+      // 指针被捕获后 click 的派发目标变成根节点，这里的 onClick 就永远收不到 —— 表现为「点了没展开」。
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div className="wg-context-head">
         <span className="wg-context-pct">上下文 {p}%</span>
         {showBalance && balance !== null && (
