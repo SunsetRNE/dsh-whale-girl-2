@@ -135,15 +135,26 @@ export function SettingsPage(): React.ReactElement {
               <span>边缘吸附范围</span>
               <code>{num('snapMargin', 0) === 0 ? '关闭' : num('snapMargin', 0) + 'px'}</code>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={160}
-              step={4}
-              value={num('snapMargin', 0)}
-              onChange={(e) => queue({ snapMargin: Number(e.target.value) })}
-              style={{ width: '100%' }}
-            />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="range"
+                min={0}
+                max={120}
+                step={1}
+                value={num('snapMargin', 0)}
+                onChange={(e) => queue({ snapMargin: Number(e.target.value) })}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                max={120}
+                step={1}
+                value={num('snapMargin', 0)}
+                onChange={(e) => queue({ snapMargin: Math.max(0, Math.min(120, Number(e.target.value) || 0)) })}
+                style={{ width: 64 }}
+              />
+            </div>
             <div style={{ opacity: 0.55, fontSize: 12 }}>
               0 = <strong>关闭吸附</strong>（拖到哪停哪）；数值 = 松手时离边多少 px 以内才被吸过去
             </div>
@@ -163,15 +174,26 @@ export function SettingsPage(): React.ReactElement {
               <span>贴边留白</span>
               <code>{num('snapInset', 12) + 'px'}</code>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={60}
-              step={2}
-              value={num('snapInset', 12)}
-              onChange={(e) => queue({ snapInset: Number(e.target.value) })}
-              style={{ width: '100%' }}
-            />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="range"
+                min={0}
+                max={40}
+                step={1}
+                value={num('snapInset', 12)}
+                onChange={(e) => queue({ snapInset: Number(e.target.value) })}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                max={40}
+                step={1}
+                value={num('snapInset', 12)}
+                onChange={(e) => queue({ snapInset: Math.max(0, Math.min(40, Number(e.target.value) || 0)) })}
+                style={{ width: 64 }}
+              />
+            </div>
             <div style={{ opacity: 0.55, fontSize: 12 }}>
               角色与屏幕边缘的最小距离 —— 嫌"贴太死"就往右拉（12~20 观感较稳），拉到 0 才是完全贴边
             </div>
@@ -180,6 +202,24 @@ export function SettingsPage(): React.ReactElement {
           <p style={{ opacity: 0.6, margin: '12px 0 0' }}>
             {saving ? '保存中…' : '已保存'} · 挂件在挂载时读取配置，刷新页面即生效。
           </p>
+
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer', opacity: 0.7, fontSize: 12 }}>
+              当前配置（全部字段）— 调好后把这段发我，可以直接写进手机端默认值
+            </summary>
+            <pre
+              style={{
+                fontSize: 11,
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                opacity: 0.8,
+                margin: '8px 0 0'
+              }}
+            >
+              {JSON.stringify(cfg, null, 1)}
+            </pre>
+          </details>
           <p style={{ opacity: 0.6, margin: '8px 0 0' }}>
             默认初始大小（按手机 / 平板自动分档）尚未接入，当前默认值为 1.00。
           </p>
