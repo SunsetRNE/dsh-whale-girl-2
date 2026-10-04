@@ -3,6 +3,26 @@
 > 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
 > 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
 
+## [0.5.1+mod.8] - 2026-10-04 · 进度条跟随「当前打开的对话框」
+
+### 问题（真机反馈）
+- 切会话 / 换一个对话框，挂件的上下文进度条不动
+- 日志证据：`session-switch` 至今只出现过 **1 次**（16:17:15，启动那一刻），之后切换对话框再没触发 —— 宿主解析出的「当前会话」从未变化
+
+### 真因
+- 宿主端 `pickSessionId` 把 `ctx.agents.roots()[0].id` 放在第①位；而 `Agent = { id: SessionId }`，`roots()[0]` 只是注册顺序里的第一个 agent，**用户切换对话框时它不变**
+- 更根本的是：**「打开另一个对话框」这个动作未必产生 session 事件**，宿主手里根本没有「UI 当前显示哪个会话」的信息 —— 靠宿主猜是猜不准的
+
+### 修法（客户端直接读官方投影）
+- 槽位组件现在接收 renderer 注入的 props（旧写法 `() => createPortal(<WhaleWidget/>, host)` 把 props 整个丢掉了），挂件改用官方 ContextMeter 同款 **`useProjection('contextPressure')`** —— 该投影解析的就是**当前打开的会话**，切对话框天然跟着变，且不需要宿主往返
+- 进度条与提示阈值（≥90% 提醒、>80% 彩蛋）改用 `effectivePct = 槽位投影 ?? 宿主值`；投影缺失自动回落，不回归
+- 首次渲染打一行 `console.info('[dsh-whale-girl-2] slot props: …')`，便于确认宿主实际给了哪些 API
+- 宿主端优先级改回跟随活动：**最近有动作的 agent → 事件时间表最新会话 → 根 agent（仅冷启动兜底）**
+- 单测同步更新（`pickSessionId` 4 条）；全套 **57 条通过**
+
+### 生效方式
+- 客户端 bundle 变了 → **重启 DSH + 刷新页面**（页面需重新加载 `lib/client.js`）
+
 ## [0.5.0+mod.7] - 2026-10-04 · 当前会话识别重做（切会话即换判定）
 
 ### 真因（插件日志 + DSH 源码定位，非猜测）

@@ -203,7 +203,47 @@ function loadLocalConfig(): MenuConfig {
   }
 }
 
-export function WhaleWidget() {
+/**
+ * 槽位 props（由 @deepseek-ai/dsh-client-ui-renderer 在渲染 slot 时注入）。
+ * 官方 ContextMeter 用的就是 `useProjection('contextPressure')` —— 它解析的是**当前打开的会话**，
+ * 所以切对话框时天然跟着变。宿主侧的 /api/state 只能按 agent 猜「当前会话」，跟不上 UI 切换，
+ * 因此这里优先用槽位投影，拿不到才回落到宿主值。
+ */
+export interface SlotApi {
+  useProjection?: (key: string) => unknown
+  useSession?: () => unknown
+  [k: string]: unknown
+}
+
+const NOOP_PROJECTION = (_key: string): undefined => undefined
+let slotPropsLogged = false
+
+export function WhaleWidget({ slot }: { slot?: SlotApi } = {}) {
+  // ⚠️ 必须无条件调用同一个函数，保持 hook 调用顺序稳定（拿不到时才换成 no-op）
+  const useProjection =
+    typeof slot?.useProjection === 'function' ? (slot.useProjection as (key: string) => unknown) : NOOP_PROJECTION
+  const pressure = useProjection('contextPressure') as
+    | { projectedTokens?: number; pressureTokens?: number; contextWindow?: number; surfaceTokens?: number }
+    | undefined
+  if (!slotPropsLogged) {
+    slotPropsLogged = true
+    try {
+      console.info(`[dsh-whale-girl-2] slot props: ${Object.keys(slot ?? {}).join(',') || '(none)'}`)
+    } catch {
+      // ignore
+    }
+  }
+  // 官方口径：used = projectedTokens ?? pressureTokens ÷ contextWindow（与 ContextMeter 一致）
+  const projUsed =
+    typeof pressure?.projectedTokens === 'number'
+      ? pressure.projectedTokens
+      : typeof pressure?.pressureTokens === 'number'
+        ? pressure.pressureTokens
+        : undefined
+  const projLimit =
+    typeof pressure?.contextWindow === 'number' && pressure.contextWindow > 0 ? pressure.contextWindow : undefined
+  const livePct = projUsed !== undefined && projLimit !== undefined ? Math.min(1, projUsed / projLimit) : undefined
+
   const rootRef = useRef<HTMLDivElement>(null)
   // ⚠️ config 必须声明在 pos 之前：pos 的初始化器引用 config.widgetScale
   //（v0.3.7 崩溃根因：初始化器在 config 声明前引用它，TDZ ReferenceError 炸掉整棵 React 树）
@@ -236,6 +276,10 @@ export function WhaleWidget() {
   const [petted, setPetted] = useState(false)
   const [petKey, setPetKey] = useState(0)
   const [state, setState] = useState<WhaleState>(EMPTY_STATE)
+  // 上下文占用：槽位投影（跟随当前打开的会话）优先，拿不到才用宿主 /api/state 的值
+  const effectivePct = livePct ?? state.contextPct
+  const effectiveTokens = projUsed ?? state.contextTokens
+  const effectiveLimit = projLimit ?? state.contextLimit
   const [bubble, setBubble] = useState<string | null>(null)
   // 0.4.4 三帧立绘：痛颜帧显示期（撞墙/撞面板/点击 650ms）；睡觉帧由 sleeping 状态直接切换
   const [painOn, setPainOn] = useState(false)
@@ -445,13 +489,13 @@ export function WhaleWidget() {
   // 实用提醒：上下文 ≥90% 建议开新会话（每次页面加载只提醒一次）
   useEffect(() => {
     if (!config.showBubble || ctxWarnedRef.current) return
-    if (state.contextPct >= 0.9) {
+    if (effectivePct >= 0.9) {
       ctxWarnedRef.current = true
       setBubble(
-        `上下文已经 ${Math.round(state.contextPct * 100)}% 啦，快满了！建议开个新会话，不然回复会被截断哦～`
+        `上下文已经 ${Math.round(effectivePct * 100)}% 啦，快满了！建议开个新会话，不然回复会被截断哦～`
       )
     }
-  }, [state.contextPct, config.showBubble])
+  }, [effectivePct, config.showBubble])
 
   // 实用提醒：余额跌破预警线（config.lowBalance，0=关闭）；充值回升后再次跌破会重新提醒
   useEffect(() => {
@@ -627,9 +671,9 @@ export function WhaleWidget() {
   // 时机彩蛋：上下文 >80% 触发一次吐槽（仅当气泡模块开启）
   useEffect(() => {
     if (!config.showBubble) return
-    const line = eggRef.current.onContextHigh(state.contextPct)
+    const line = eggRef.current.onContextHigh(effectivePct)
     if (line) setBubble(line)
-  }, [state.contextPct, config.showBubble])
+  }, [effectivePct, config.showBubble])
 
   // 卸载时清理弹跳循环与抖动画计时
   useEffect(() => {
@@ -1833,9 +1877,9 @@ export function WhaleWidget() {
         )}
         {config.showProgress && (
           <ContextBar
-            pct={state.contextPct}
-            tokens={state.contextTokens}
-            limit={state.contextLimit}
+            pct={effectivePct}
+            tokens={effectiveTokens}
+            limit={effectiveLimit}
             balance={state.balance}
             currency={state.currency}
             todayUsage={state.todayUsage}

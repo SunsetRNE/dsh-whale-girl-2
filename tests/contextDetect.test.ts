@@ -2,22 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_CONTEXT_LIMIT, occupancyOf, pickSessionId } from '../src/services/context'
 
 describe('当前会话识别（切会话就能换判定）', () => {
-  it('优先根 agent 的 id —— Agent 在本版 DSH 是 { id }，旧代码读 .session 永远 undefined', () => {
+  it('优先「最近有动作的那个 agent」—— 根 agent 在切换对话框时不变，不能钉死它', () => {
     const seen = new Map([['s-other', 9]])
-    expect(pickSessionId({ rootId: 's-root', activeId: 's-active', seen })).toBe('s-root')
+    expect(pickSessionId({ rootId: 's-root', activeId: 's-active', seen })).toBe('s-active')
   })
 
-  it('没有根 agent 时用最近一次 turn 的 agent.id', () => {
-    expect(pickSessionId({ activeId: 's-active', seen: new Map([['s-other', 9]]) })).toBe('s-active')
-  })
-
-  it('都没有时取事件时间表里最新的 —— 不是 sessions.list()[0]（那是最旧的，切会话后必错）', () => {
+  it('没有活跃 agent 时取事件时间表里最新的 —— 不是 sessions.list()[0]（那是最旧的，切会话后必错）', () => {
     const seen = new Map([
       ['oldest', 1],
       ['middle', 5],
       ['newest', 9]
     ])
-    expect(pickSessionId({ seen })).toBe('newest')
+    expect(pickSessionId({ rootId: 's-root', seen })).toBe('newest')
+  })
+
+  it('冷启动（尚无任何事件）才回落到根 agent 的 id', () => {
+    expect(pickSessionId({ rootId: 's-root' })).toBe('s-root')
   })
 
   it('全空返回 null，不退回一个错的会话', () => {

@@ -95,7 +95,10 @@ export function apply(ctx: any) {
       slots.inject('shell.overlay', () =>
         slots.register(
           { name: 'shell.overlay', id: 'whale-girl-widget', order: 70, label: '鲸鱼娘' },
-          () => createPortal(<WhaleWidget />, host)
+          // 把槽位 props 透传给挂件：官方 ContextMeter 就是靠 props 里的 useProjection
+          // 拿到「当前打开的会话」的 contextPressure 投影 —— 切对话框时它天然跟着变。
+          // 旧写法 `() => createPortal(<WhaleWidget />, host)` 把 props 整个丢掉了。
+          (props: Record<string, unknown>) => createPortal(<WhaleWidget slot={props} />, host)
         )
       )
       cdiag('registered into shell.overlay as whale-girl-widget')

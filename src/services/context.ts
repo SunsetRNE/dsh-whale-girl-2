@@ -21,18 +21,21 @@ export function computeContextPct(tokens: number, limit: number): number {
 export type SeenMap = ReadonlyMap<string, number>
 
 /**
- * 挑「当前会话」。优先级：
- *   ① 根 agent 的 id（`ctx.agents.roots()[0].id`）—— 这才是用户眼里的「当前会话」；
- *   ② 最近一次 turn-stopping / inbox-inserted 事件里的 `agent.id`；
- *   ③ 事件时间表里最新的那个会话；
+ * 挑「当前会话」。优先级（0.5.1：改为**跟随真实活动**，不再钉死根 agent）：
+ *   ① 最近一次 turn-stopping / inbox-inserted 事件里的 `agent.id` —— 用户正在用的那个会话；
+ *   ② 事件时间表里最新的那个会话（切对话框后一旦有事件就会命中）；
+ *   ③ 根 agent 的 id（`ctx.agents.roots()[0].id`）—— 只作冷启动兜底；
  *   ④ 都没有 → null（宁可报 null，也不要退回一个错的会话）。
+ *
+ * 为什么把根 agent 从第①位降下来：`Agent = { id: SessionId }`，而 roots()[0] 只是注册顺序里
+ * 的第一个 agent，用户切换对话框时它**不变** —— 进度条就会永远停在那一个会话上（真机反馈
+ * 「切会话进度条不动」，日志里 session-switch 至今只出现过 1 次，正是它）。
  */
 export function pickSessionId(input: {
   rootId?: string | null
   activeId?: string | null
   seen?: SeenMap
 }): string | null {
-  if (input.rootId) return input.rootId
   if (input.activeId) return input.activeId
   let best: string | null = null
   let bestT = -1
@@ -42,7 +45,8 @@ export function pickSessionId(input: {
       best = id
     }
   }
-  return best
+  if (best) return best
+  return input.rootId ?? null
 }
 
 export interface Occupancy {
