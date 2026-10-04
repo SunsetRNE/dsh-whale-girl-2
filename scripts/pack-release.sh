@@ -3,7 +3,7 @@
 # 用法: bash scripts/pack-release.sh [源码目录] [输出目录]
 set -euo pipefail
 
-SRC="${1:-/root/S/dsh-whale-girl-local}"
+SRC="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 OUT="${2:-$SRC}"
 VER="$(node -p "require('$SRC/package.json').version")"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"

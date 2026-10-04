@@ -4,7 +4,7 @@
 # 这条路走 profile 包管理 + bundles 注册，不经过那个接口。
 set -euo pipefail
 
-SRC="${SRC:-/root/S/dsh-whale-girl-local}"
+SRC="${SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROF="${PROF:-/root/.dsh/profiles/web}"
 STAMP="$(date +%Y%m%d%H%M%S)"
 

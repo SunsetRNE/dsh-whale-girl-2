@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 回滚：从 _backup 里最近一次安装前快照恢复 profile，并卸掉 link。
 set -euo pipefail
-SRC="${SRC:-/root/S/dsh-whale-girl-local}"
+SRC="${SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROF="${PROF:-/root/.dsh/profiles/web}"
 BK="$(ls -1t "$SRC/_backup"/package.json.* 2>/dev/null | head -1 || true)"
 [ -n "$BK" ] || { echo "FAIL _backup 里没有 package.json 快照"; exit 1; }

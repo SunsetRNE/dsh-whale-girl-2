@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 判据：不碰 profile，只验「包形态可被 DSH 装载」的四条硬条件。
 set -uo pipefail
-SRC="${SRC:-/root/S/dsh-whale-girl-local}"
+SRC="${SRC:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 fail=0
 chk() { printf '%-6s %s\n' "$1" "$2"; [ "$1" = OK ] || fail=1; }
 
