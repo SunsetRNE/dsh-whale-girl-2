@@ -11,8 +11,8 @@ cp -a "$BK" "$PROF/package.json"
 echo "RESTORED  profile/package.json <- $BK"
 node -e '
 const p=require(process.argv[1]+"/package.json");
-const dep=Object.keys(p.dependencies||{}).includes("dsh-whale-girl");
-const bun=(p.dsh?.profile?.bundles||[]).includes("dsh-whale-girl");
+const dep=Object.keys(p.dependencies||{}).includes("dsh-whale-girl-2");
+const bun=(p.dsh?.profile?.bundles||[]).includes("dsh-whale-girl-2");
 if(dep||bun){console.error("FAIL 回滚后仍在注册表里");process.exit(1)}
 console.log("OK        已从 dependencies 与 dsh.profile.bundles 中移除");
 ' "$PROF"

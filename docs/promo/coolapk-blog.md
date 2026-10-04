@@ -19,7 +19,7 @@ DSH 右下角挂了一只鲸鱼娘，能干这些事：
 安装一条命令（官方端/第三方端都行）：
 
 ```
-dsh plugin --profile desktop add dsh-whale-girl
+dsh plugin --profile desktop add dsh-whale-girl-2
 ```
 
 不占额外进程，空闲几乎不吃 CPU，立绘音效全内嵌不怕断网。开源 MIT。

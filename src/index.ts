@@ -7,7 +7,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const name = 'dsh-whale-girl'
+export const name = 'dsh-whale-girl-2'
 export const inject = ['webServer', 'credentials', 'timer', 'tokenMeter', 'sessions', 'agents']
 
 const DSH_HOME = process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
@@ -240,7 +240,7 @@ function registerAssetRoutes(ctx: any): void {
   for (const f of ['whale-girl.png', 'Ya1.mp3', 'Ya2.mp3']) {
     safeRegister(webServer, {
       kind: 'exact',
-      path: `/dsh-whale-girl/${f}`,
+      path: `/dsh-whale-girl-2/${f}`,
       handler: (req: unknown, res: any) => {
         try {
           const buf = fs.readFileSync(path.join(ASSET_ROOT, f))
@@ -532,7 +532,7 @@ export function apply(ctx: any) {
   function registerApiRoutes(server: any): void {
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/state',
+      path: '/dsh-whale-girl-2/api/state',
       handler: (req: unknown, res: any) => {
         if (DEBUG) diag('state-hit')
         res.writeHead(200, {
@@ -545,7 +545,7 @@ export function apply(ctx: any) {
     // 工作状态端点：done 30 秒、thinking 10 分钟惰性过期归 idle
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/workstate',
+      path: '/dsh-whale-girl-2/api/workstate',
       handler: (req: unknown, res: any) => {
         let s = workState
         const age = Date.now() - workStateSince
@@ -561,7 +561,7 @@ export function apply(ctx: any) {
     // JSONP 端点：client 用动态 <script> 加载（script 资源请求与 client.js 同通道，可透过 webserver 认证；普通 fetch 会被 403 拦）
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/state.js',
+      path: '/dsh-whale-girl-2/api/state.js',
       handler: (req: unknown, res: any) => {
         if (DEBUG) diag('state-jsonp-hit')
         res.writeHead(200, {
@@ -574,7 +574,7 @@ export function apply(ctx: any) {
     // GET：返回挂件配置；POST：保存挂件配置
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/config',
+      path: '/dsh-whale-girl-2/api/config',
       handler: (req: any, res: any) => {
         const method = (req.method ?? 'GET').toUpperCase()
         if (method === 'POST' || method === 'PUT') {
@@ -605,7 +605,7 @@ export function apply(ctx: any) {
     // 交互诊断回流：bridge 脚本收到挂件事件后上报，供宿主写诊断日志（我读日志即可确认弹跳/点击等交互发生）
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/diag-event',
+      path: '/dsh-whale-girl-2/api/diag-event',
       handler: (req: any, res: any) => {
         let body = ''
         req.on('data', (c: Buffer) => {
@@ -624,7 +624,7 @@ export function apply(ctx: any) {
     // API providers list + per-provider balance (parallel; null when unsupported)
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/providers',
+      path: '/dsh-whale-girl-2/api/providers',
       handler: (req: unknown, res: any) => {
         void (async () => {
           const creds = ctx.credentials ?? ctx.get('credentials')
@@ -663,7 +663,7 @@ export function apply(ctx: any) {
     // Switch default model route (writes agent-default-model in settings.yaml)
     safeRegister(server, {
       kind: 'exact',
-      path: '/dsh-whale-girl/api/select-model',
+      path: '/dsh-whale-girl-2/api/select-model',
       handler: (req: any, res: any) => {
         let body = ''
         req.on('data', (c: Buffer) => {
@@ -703,7 +703,7 @@ export function apply(ctx: any) {
   var nextDelay = 60000
   var pull = function () {
     try {
-      fetch('/dsh-whale-girl/api/state', { cache: 'no-store' })
+      fetch('/dsh-whale-girl-2/api/state', { cache: 'no-store' })
         .then(function (r) { return r.json() })
         .then(function (d) {
           if (d && typeof d === 'object') {
@@ -721,7 +721,7 @@ export function apply(ctx: any) {
   // 工作状态：5 秒轮询并广播给挂件（读取轻量端点，不触发 measure）
   var pullWork = function () {
     try {
-      fetch('/dsh-whale-girl/api/workstate', { cache: 'no-store' })
+      fetch('/dsh-whale-girl-2/api/workstate', { cache: 'no-store' })
         .then(function (r) { return r.json() })
         .then(function (d) {
           if (d && d.state) {
@@ -739,7 +739,7 @@ export function apply(ctx: any) {
     var d = ev.data
     if (d && d.__wgEvent) {
       try {
-        fetch('/dsh-whale-girl/api/diag-event', {
+        fetch('/dsh-whale-girl-2/api/diag-event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(d.__wgEvent)

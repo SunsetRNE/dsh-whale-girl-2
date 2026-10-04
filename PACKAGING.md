@@ -1,12 +1,12 @@
-# dsh-whale-girl 0.4.2 打包说明（2026-10-04 03:33Z）
+# dsh-whale-girl-2 0.4.2 打包说明（2026-10-04 03:33Z）
 
-## 产物（工作区 `/root/S/dsh-whale-girl-local/`）
+## 产物（工作区 `/root/Project-Integrated-Workspace/dsh-whale-girl-local/`）
 
 | 文件 | 说明 |
 |---|---|
-| `dsh-whale-girl-0.4.2-*.tar.gz` | 完整包，60 文件，655712 B，根目录 `dsh-whale-girl-local/` |
-| `dsh-whale-girl-0.4.2-*.tar.gz.sha256` | 旁挂校验（`sha256sum -c` 直接可用） |
-| `MANIFEST-dsh-whale-girl-0.4.2.txt` | 逐文件 sha256（含在包内，可离线核对） |
+| `dsh-whale-girl-2-0.4.2-*.tar.gz` | 完整包，60 文件，655712 B，根目录 `dsh-whale-girl-local/` |
+| `dsh-whale-girl-2-0.4.2-*.tar.gz.sha256` | 旁挂校验（`sha256sum -c` 直接可用） |
+| `MANIFEST-dsh-whale-girl-2-0.4.2.txt` | 逐文件 sha256（含在包内，可离线核对） |
 | `scripts/pack-release.sh` | 打包脚本，自带三项判据，可重复执行 |
 
 ## 打包范围
@@ -30,18 +30,18 @@ JUDGE-3 可装载: version=0.4.2 main=./lib/index.js
 ## 还原与安装
 
 ```bash
-tar -xzf dsh-whale-girl-0.4.2-20261004T033308Z.tar.gz -C /root/S
-cd /root/S/dsh-whale-girl-local && npm ci && node scripts/build.mjs
+tar -xzf dsh-whale-girl-2-0.4.2-20261004T033308Z.tar.gz -C /root/Project-Integrated-Workspace
+cd /root/Project-Integrated-Workspace/dsh-whale-girl-local && npm ci && node scripts/build.mjs
 ```
 
 装机走 profile 软链（本机既有形态，非拷贝安装）：
 
 ```bash
-ln -sfn /root/S/dsh-whale-girl-local /root/.dsh/profiles/web/node_modules/dsh-whale-girl
+ln -sfn /root/Project-Integrated-Workspace/dsh-whale-girl-local /root/.dsh/profiles/web/node_modules/dsh-whale-girl-2
 bash scripts/install-local.sh          # 可选的自动注册（会先备份 profile 清单）
 ```
 
-`profiles/web/package.json` 的 `dsh.profile.bundles` 已含 `dsh-whale-girl`；
+`profiles/web/package.json` 的 `dsh.profile.bundles` 已含 `dsh-whale-girl-2`；
 `patchReload: "startup"` —— 改动随 `dsh web` 重启生效。
 
 ## 与运行实例的关系

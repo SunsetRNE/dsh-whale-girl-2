@@ -1,0 +1,35 @@
+{
+  "name": "dsh-profile-web",
+  "private": true,
+  "dependencies": {
+    "dsh-device-shell-guide": "link:/root/dsha-device-shell-guide",
+    "dsh-task-notifier": "link:/root/dsha-task-notifier",
+    "dsh-status-overlay": "link:/root/dsha-status-overlay",
+    "dsh-web-mobile": "link:/root/dsha-web-mobile",
+    "dsh-computer-use-android": "link:/root/dsha-computer-use-android",
+    "dsh-auto-review": "link:/root/dsha-auto-review",
+    "dsh-tool-vscreen": "link:/root/dsha-tool-vscreen",
+    "dsh-app-integration": "link:/root/dsha-app-integration",
+    "dsh-infinite-gen-5": "link:/root/.dsh/plugin-src/dsh-infinite-gen-5",
+    "dsh-whale-girl": "link:/root/Project-Integrated-Workspace/dsh-whale-girl-local"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-device-shell-guide",
+        "dsh-task-notifier",
+        "dsh-status-overlay",
+        "dsh-web-mobile",
+        "dsh-computer-use-android",
+        "dsh-auto-review",
+        "dsh-tool-vscreen",
+        "dsh-app-integration",
+        "dsh-infinite-gen-5",
+        "dsh-whale-girl"
+      ],
+      "patchReload": "startup"
+    }
+  }
+}

@@ -1,6 +1,15 @@
-# dsh-whale-girl
+# dsh-whale-girl-2
 
-**鲸鱼娘·灵动挂件** —— 一个会卖萌、会记账、会弹跳、会睡觉的 DSH 桌面挂件。
+**鲸鱼娘·灵动挂件（二改版）** —— 一个会卖萌、会记账、会弹跳、会睡觉的 DSH 桌面挂件。
+
+> **二改声明**
+> 本插件是 [dsh-whale-girl](https://github.com/nickkkkkk123123/dsh-whale-girl)（作者 **nickkkkkk123123**）的**二次开发版本**，
+> 二改作者：**SunsetRNR** · 仓库：<https://github.com/SunsetRNE/dsh-whale-girl-2>
+> 二改内容：面向 DSHA（Android 容器版 DSH）与平板分辨率的适配改造 + 宿主侧工程加固
+> （数据桥兜底、diag 死代码修复、凭据候选引用、select-model 白名单与原子写、时区统一、
+> 热路径直写 transform 的性能改造、设置页与尺寸自适应）。上游原作的完整功能与美术资源均予保留。
+> 许可：MIT（遵循上游 LICENSE，保留原作者版权声明）。
+> 上游历史设计文档 `docs/superpowers/` 保持原样未改，以存其真。
 
 > ✅ 已收录 [dsh-market 创意工坊](https://dsh-market.com/)（社区插件索引），可在 DSH 内直接搜索"鲸鱼娘 / Whale Girl"安装。
 > ✅ **官方 DSH Desktop 与第三方 DSH 双端兼容**（0.4.3 起）：官方端无 slots 服务的宿主环境已适配，两端都能正常显示挂件。
@@ -49,20 +58,20 @@
 
 ```bash
 # 官方 DSH Desktop
-dsh plugin --profile desktop add dsh-whale-girl
+dsh plugin --profile desktop add dsh-whale-girl-2
 
 # 第三方 DSH（web profile）
-dsh plugin --profile web add dsh-whale-girl
+dsh plugin --profile web add dsh-whale-girl-2
 ```
 
-> 本机没有 `dsh` 命令时用：`npx @deepseek-ai/dsh plugin --profile desktop add dsh-whale-girl`（npm 镜像源自动加速）。
+> 本机没有 `dsh` 命令时用：`npx @deepseek-ai/dsh plugin --profile desktop add dsh-whale-girl-2`（npm 镜像源自动加速）。
 
 **方式二：GitHub Release tgz（离线/镜像不通时兜底）**
 
-从 [Releases](https://github.com/nickkkkkk123123/dsh-whale-girl/releases) 下载 `dsh-whale-girl-x.y.z.tgz` 后：
+从 [Releases](https://github.com/SunsetRNE/dsh-whale-girl-2/releases) 下载 `dsh-whale-girl-2-x.y.z.tgz` 后：
 
 ```bash
-dsh plugin --profile desktop add ./dsh-whale-girl-x.y.z.tgz
+dsh plugin --profile desktop add ./dsh-whale-girl-2-x.y.z.tgz
 ```
 
 > 卸载说明：卸载后 DSH_HOME（`~/.dsh`）会留下数据文件（`.whale-girl-config.json` / `.whale-girl-usage.json` / `.whale-girl-diag.log`），均为纯数据、不参与任何执行，不需要可手动删除。
@@ -152,7 +161,7 @@ dsh plugin --profile desktop add ./dsh-whale-girl-x.y.z.tgz
 DSH Desktop 的 webserver 会对不带 renderer 认证头的子资源请求返回 **403**（包括 `fetch`、`<img>`、`<audio>`、`<script>`）。因此：
 
 - **图片 / 音效**：内嵌为 data URL，完全不走网络请求
-- **数据**：宿主向主页面顶层注入桥接脚本，脚本用**带认证的 fetch** 拉取 `/dsh-whale-girl/api/state`，再通过 `postMessage` 广播给挂件
+- **数据**：宿主向主页面顶层注入桥接脚本，脚本用**带认证的 fetch** 拉取 `/dsh-whale-girl-2/api/state`，再通过 `postMessage` 广播给挂件
 
 ## 余额 key
 

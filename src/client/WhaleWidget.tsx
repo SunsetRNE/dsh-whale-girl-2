@@ -469,11 +469,11 @@ export function WhaleWidget() {
     }
   }, [])
 
-  // 兜底轮询：web/桥接未注入时直接拉 /dsh-whale-girl/api/state（每 60s + 挂载时），避免余额恒为 null
+  // 兜底轮询：web/桥接未注入时直接拉 /dsh-whale-girl-2/api/state（每 60s + 挂载时），避免余额恒为 null
   useEffect(() => {
     let alive = true
     const pull = () => {
-      fetch('/dsh-whale-girl/api/state', { cache: 'no-store' })
+      fetch('/dsh-whale-girl-2/api/state', { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!alive || !d || typeof d !== 'object') return
@@ -524,7 +524,7 @@ export function WhaleWidget() {
   // 配置：从宿主 GET 加载（失败则保持本地配置）
   useEffect(() => {
     let alive = true
-    fetch('/dsh-whale-girl/api/config', { cache: 'no-store' })
+    fetch('/dsh-whale-girl-2/api/config', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((o) => {
         if (alive && o && typeof o === 'object') setConfig(normalizeConfig(o))
@@ -545,7 +545,7 @@ export function WhaleWidget() {
     } catch {
       // ignore
     }
-    fetch('/dsh-whale-girl/api/config', {
+    fetch('/dsh-whale-girl-2/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(next)
@@ -755,7 +755,7 @@ export function WhaleWidget() {
     e.stopPropagation()
     setMenu({ x: e.clientX, y: e.clientY })
     setProviders(null)
-    fetch('/dsh-whale-girl/api/providers', { cache: 'no-store' })
+    fetch('/dsh-whale-girl-2/api/providers', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (d && Array.isArray(d.providers)) setProviders(d.providers)
@@ -897,7 +897,7 @@ export function WhaleWidget() {
       'deepseek-official': 'deepseek-v4-flash'
     }
     const model = row.models && row.models.length > 0 ? row.models[0] : (FALLBACK_MODEL[id] ?? '')
-    fetch('/dsh-whale-girl/api/select-model', {
+    fetch('/dsh-whale-girl-2/api/select-model', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider: id, model })

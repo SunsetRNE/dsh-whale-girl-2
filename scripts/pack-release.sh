@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 打包 dsh-whale-girl 当前可用版本到工作区，自带三项判据。
+# 打包 dsh-whale-girl-2 当前可用版本到工作区，自带三项判据。
 # 用法: bash scripts/pack-release.sh [源码目录] [输出目录]
 set -euo pipefail
 
@@ -7,12 +7,12 @@ SRC="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 OUT="${2:-$SRC}"
 VER="$(node -p "require('$SRC/package.json').version")"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-NAME="dsh-whale-girl-$VER-$STAMP"
-MF="$SRC/MANIFEST-dsh-whale-girl-$VER.txt"
+NAME="dsh-whale-girl-2-$VER-$STAMP"
+MF="$SRC/MANIFEST-dsh-whale-girl-2-$VER.txt"
 
 # 1) 清单：先剔除所有归档文件，避免自引用（清单/包的哈希互相包含是无解循环）
 {
-  echo "dsh-whale-girl 打包清单"
+  echo "dsh-whale-girl-2 打包清单"
   echo "版本: $VER"
   echo "打包时刻(UTC): $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   echo "构建时刻(UTC): $(stat -c %y "$SRC/lib/index.js" | cut -d. -f1)"

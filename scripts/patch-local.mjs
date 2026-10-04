@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 把 dsh-whale-girl 改造成可在本机 DSH 0.1.7-rc.2 / DSHA 容器下本地 link 安装的形态。
+// 把 dsh-whale-girl-2 改造成可在本机 DSH 0.1.7-rc.2 / DSHA 容器下本地 link 安装的形态。
 // 只动副本；原文件哈希见 ../ORIGINAL.sha256
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'

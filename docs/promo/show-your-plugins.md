@@ -6,7 +6,7 @@
 
 ## 中文版
 
-**标题：🐳 dsh-whale-girl — 会记账、会弹跳、还会躺平睡觉的鲸鱼娘挂件（v0.4.3）**
+**标题：🐳 dsh-whale-girl-2 — 会记账、会弹跳、还会躺平睡觉的鲸鱼娘挂件（v0.4.3）**
 
 各位好，分享一下我做的 DSH 桌面挂件：**鲸鱼娘**。在窗口右下角养一只，她能帮你盯着余额和上下文，也能被甩来甩去。
 
@@ -29,7 +29,7 @@
 **安装**（npm 已发布，官方端/第三方端都支持）：
 
 ```bash
-dsh plugin --profile desktop add dsh-whale-girl
+dsh plugin --profile desktop add dsh-whale-girl-2
 ```
 
 **值一提的技术点**：
@@ -42,7 +42,7 @@ dsh plugin --profile desktop add dsh-whale-girl
 
 **彩蛋**：她偶尔会说 "Let me go~ I'm making the calls~ Let me write the JSON~♪"
 
-仓库：https://github.com/nickkkkkk123123/dsh-whale-girl
+仓库：https://github.com/SunsetRNE/dsh-whale-girl-2
 dsh-market 搜索「鲸鱼娘 / Whale Girl」可直接安装。
 
 有问题/想加功能欢迎回帖，下个版本在画新表情立绘（""><" 痛颜 + 闭眼睡觉）👋
@@ -51,7 +51,7 @@ dsh-market 搜索「鲸鱼娘 / Whale Girl」可直接安装。
 
 ## English version
 
-**Title: 🐳 dsh-whale-girl — a widget that tracks your balance, bounces around, and takes naps**
+**Title: 🐳 dsh-whale-girl-2 — a widget that tracks your balance, bounces around, and takes naps**
 
 Hey everyone, sharing my DSH desktop widget: **Whale Girl**. She lives in the corner of your window, keeps an eye on your balance and context usage, and yes — you can fling her across the screen.
 
@@ -74,7 +74,7 @@ A pure front-end DSH plugin — no extra processes (just a DOM node in the Web U
 **Install** (published on npm, works on both official and community DSH):
 
 ```bash
-dsh plugin --profile desktop add dsh-whale-girl
+dsh plugin --profile desktop add dsh-whale-girl-2
 ```
 
 **A couple of technical notes worth mentioning**
@@ -85,7 +85,7 @@ dsh plugin --profile desktop add dsh-whale-girl
 
 **Footprint**: ~0.6% idle CPU delta, 0 extra processes, eco mode stops rendering when idle. Full measurement methodology in the repo — desktop pets don't have to be resource hogs.
 
-Repo: https://github.com/nickkkkkk123123/dsh-whale-girl
+Repo: https://github.com/SunsetRNE/dsh-whale-girl-2
 Also on dsh-market: search "Whale Girl".
 
 Feedback and feature requests welcome. Next up: new expression sprites (pain "><" face + closed-eyes sleep) 👋

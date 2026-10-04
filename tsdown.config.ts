@@ -27,7 +27,7 @@ export default defineConfig([
     },
     outputOptions: {
       entryFileNames: 'client.js',
-      banner: 'window.__ModuleLoader__.load({ id: "dsh-whale-girl", factory: (require) => {',
+      banner: 'window.__ModuleLoader__.load({ id: "dsh-whale-girl-2", factory: (require) => {',
       footer: 'return module.exports; } });',
       intro: 'var module = { exports: {} }; var exports = module.exports;'
     }

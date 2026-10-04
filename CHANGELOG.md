@@ -1,5 +1,28 @@
 # 更新日志
 
+> 说明：0.4.2 及更早条目为**上游原作** dsh-whale-girl（作者 nickkkkkk123123）的发布历史，原样保留未改。
+> 二改版 **dsh-whale-girl-2**（作者 SunsetRNR，仓库 <https://github.com/SunsetRNE/dsh-whale-girl-2>）的改动自下方 `[0.4.4+mod.1]` 起单独标注。
+
+## [0.4.4+mod.1] - 2026-10-04 · 二改版
+
+### 归属与命名
+- 包名 `dsh-whale-girl` → `dsh-whale-girl-2`；bundle patch 条目 `id/name`、客户端模块 id、HTTP 路由前缀 `/dsh-whale-girl/` → `/dsh-whale-girl-2/` 全链同步
+- README / NOTICE / package.json 指向二改仓库，作者字段标注 SunsetRNR，上游署名与 LICENSE 原样保留
+
+### 宿主侧加固
+- diag 死代码修复（statSync ENOENT 单独兜住，否则干净安装上无任何日志产出）
+- 新增 `escapeLog()`：请求体中的换行/控制字符不再能伪造日志行
+- 官方 key 解析改为候选引用名回退（不再只认 `DEEPSEEK_API_KEY`，DSHA 覆盖 apiKeyEnv 后也能取到）
+- `select-model` 入口白名单 + 原子写 + `.bak`；估费真正使用 `outputTokens`；时区统一 +8
+
+### 客户端侧
+- 热路径（拖动 / 甩抛 / 弹跳 / 绳摆 / 重力滑行）直写 `transform`，不再每帧进 React
+- 数据桥兜底轮询、重入与挂载守卫；等不到 slots 时回退直挂 body（官方 Desktop 与第三方宿主双兼容）
+
+### 合并上游 0.4.3 / 0.4.4
+- 取上游：`safeRegister` 重复路由兜底、`deepSleep` 挺尸态、拖尾、三帧立绘表情系统、`whalePoseDataUrls` 与 `assets/poses/*`
+- 保本地：`onPointerMove` 不调 `markActive()`（避免拖拽期每帧重建定时器）等全部性能与安全改造
+
 ## [0.4.4] - 2026-10-04
 
 ### 表情系统图帧回归正式版（累计自 0.4.4-beta.1~2）

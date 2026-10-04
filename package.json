@@ -1,8 +1,20 @@
 {
-  "name": "dsh-whale-girl",
+  "name": "dsh-whale-girl-2",
   "version": "0.4.4",
-  "description": "鲸鱼娘·灵动挂件：余额/用量/上下文进度/彩蛋",
+  "description": "鲸鱼娘·灵动挂件（二改版）：余额/用量/上下文进度/彩蛋 —— 基于 nickkkkkk123123/dsh-whale-girl 二次开发，面向 DSHA 手机 App 与平板分辨率",
   "license": "MIT",
+  "author": "SunsetRNR",
+  "contributors": [
+    "nickkkkkk123123 (上游 dsh-whale-girl 作者)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SunsetRNE/dsh-whale-girl-2.git"
+  },
+  "homepage": "https://github.com/SunsetRNE/dsh-whale-girl-2",
+  "bugs": {
+    "url": "https://github.com/SunsetRNE/dsh-whale-girl-2/issues"
+  },
   "type": "module",
   "main": "./lib/index.js",
   "exports": {

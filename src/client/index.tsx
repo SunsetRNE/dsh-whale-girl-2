@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { WhaleWidget } from './WhaleWidget'
 
-export const name = 'dsh-whale-girl'
+export const name = 'dsh-whale-girl-2'
 
 /**
  * Cordis 服务依赖：`slots` 由 @deepseek-ai/dsh-client-ui-renderer 提供
@@ -21,7 +21,7 @@ function cdiag(step: string): void {
   const w = window as unknown as { __wgClientDiag?: string[] }
   w.__wgClientDiag = w.__wgClientDiag ?? []
   w.__wgClientDiag.push(`${new Date().toISOString()} ${step}`)
-  console.info(`[dsh-whale-girl] ${step}`)
+  console.info(`[dsh-whale-girl-2] ${step}`)
 }
 
 export function apply(ctx: any) {
@@ -40,10 +40,10 @@ export function apply(ctx: any) {
   const mountToBody = (): HTMLElement => {
     // 上游 0.4.4 的双激活防护：官方 loader 走 bundles + 插件自带 patch 两条路径时
     // apply 会被跑两次，mount 点已存在即复用，不再新建第二个。
-    const existed = document.getElementById('dsh-whale-girl-mount')
+    const existed = document.getElementById('dsh-whale-girl-2-mount')
     if (existed) return existed
     const host = document.createElement('div')
-    host.id = 'dsh-whale-girl-mount'
+    host.id = 'dsh-whale-girl-2-mount'
     // 独立层叠上下文 + 最高层级，防被其他插件覆盖。
     // 不设 pointer-events，让挂件（拖动/点击/右键菜单）正常交互。
     host.style.position = 'fixed'
